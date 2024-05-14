@@ -8,8 +8,8 @@ const WIDTH: usize = 800;
 const HEIGHT: usize = 600;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let input_dir = "D:/RUST_PROJECT/Rust_training/images_vache";
-    let output_dir = "D:/Bureau/tout/Licence/Image darriver";
+    let input_dir = "C:\\Users\\lucho\\OneDrive\\Documents\\cours\\Esgi3\\projet_annuel\\DataSet\\vache";
+    let output_dir = "C:\\Users\\lucho\\OneDrive\\Documents\\cours\\Esgi3\\projet_annuel\\DataSet\\vache_trie";
     let mut window = Window::new(
         "Image Viewer - Press ESC to exit, S to save, Left/Right to navigate",
         WIDTH,
