@@ -54,12 +54,12 @@ impl MLP {
             }
         }
 
+        println!("self.X[0] len: {}", X[0].len());
+
         MLP { d, W, L, X, deltas }
     }
 
     fn _propagate(&mut self, sample_inputs: Vec<f64>, is_classification: bool) {
-
-        println!("propa");
 
         for j in 0..sample_inputs.len() {
             self.X[0][j + 1] = sample_inputs[j];
@@ -175,6 +175,10 @@ extern "C" fn train_mlp_model(model: *mut MLP,
         let inputs_slice = std::slice::from_raw_parts(dataset_inputs, (lines * columns) as usize);
         let outputs_slice = std::slice::from_raw_parts(dataset_outputs, (lines * output_columns) as usize);
 
+        println!("{}", (lines * columns) as usize);
+        println!("line {}", (lines) as usize);
+        println!("col {}", (columns) as usize);
+
         // Convertir les slices en Vec<Vec<f64>> pour les entrées et les sorties
         let mut all_samples_inputs: Vec<Vec<f64>> = Vec::new();
         let mut all_samples_outputs: Vec<Vec<f64>> = Vec::new();
@@ -207,6 +211,7 @@ extern "C" fn train_mlp_model(model: *mut MLP,
 #[no_mangle]
 extern "C" fn predict_mlp_model(model: *mut MLP,
                                 sample_inputs: *const f64,
+                                lines: i64,
                                 columns: i64,
                                 is_classification: bool) -> *mut f64 {
     unsafe {
@@ -218,19 +223,37 @@ extern "C" fn predict_mlp_model(model: *mut MLP,
         println!("pred python");
 
         // Convertir le pointeur des échantillons d'entrée en slice
-        let inputs_slice = std::slice::from_raw_parts(sample_inputs, columns as usize);
+        let inputs_slice = std::slice::from_raw_parts(sample_inputs, (lines * columns) as usize);
 
-        // Convertir le slice en Vec<f64> pour les entrées
-        let mut sample_inputs_vec: Vec<f64> = Vec::new();
-        for i in 0..columns {
-            sample_inputs_vec.push(inputs_slice[i as usize]);
+        // Convertir les slices en Vec<Vec<f64>> pour les entrées et les sorties
+        let mut all_samples_inputs: Vec<Vec<f64>> = Vec::new();
+
+        for i in 0..lines {
+            let mut input_row = Vec::new();
+            for j in 0..columns {
+                input_row.push(inputs_slice[(i * columns + j) as usize]);
+            }
+            all_samples_inputs.push(input_row);
         }
 
-        // Appeler la méthode predict du modèle MLP
-        let predicted_output = (*model).predict(sample_inputs_vec, is_classification);
+        let mut pred: Vec<Vec<f64>> = vec![];
 
-        // Allouer de la mémoire pour stocker les sorties prédites
-        let output_ptr = Box::into_raw(predicted_output.into_boxed_slice()) as *mut f64;
+        for k in 0..all_samples_inputs.len() {
+            println!("pred {}", k);
+            let pred_value = (*model).predict(all_samples_inputs[k].clone(), is_classification);
+            pred.push(pred_value);
+            println!("{:?}", pred);
+        }
+
+        println!("Prediction : {:?}", pred);
+
+        // Aplatir pred en un Vec<f64>
+        let pred_flattened: Vec<f64> = pred.into_iter().flatten().collect();
+
+        println!("Prediction_flat : {:?}", pred_flattened);
+
+        // Convertir pred_flattened en un tableau boxé et obtenir un pointeur vers le premier élément
+        let output_ptr = Box::into_raw(pred_flattened.into_boxed_slice()) as *mut f64;
 
         output_ptr
     }
