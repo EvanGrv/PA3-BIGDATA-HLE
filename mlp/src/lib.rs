@@ -276,7 +276,7 @@ mod tests {
     #[test]
     fn test_train() {
         // Définition des listes X et Y
-        let X: Vec<Vec<f64>> = vec![
+        /*let X: Vec<Vec<f64>> = vec![
             vec![0.0, 0.0],
             vec![0.0, 1.0],
             vec![1.0, 0.0],
@@ -288,10 +288,22 @@ mod tests {
             vec![1.0],
             vec![1.0],
             vec![-1.0],
+        ];*/
+
+        let X: Vec<Vec<f64>> = vec![
+            vec![1.0, 1.0],
+            vec![2.0, 3.0],
+            vec![3.0, 3.0],
+        ];
+
+        let Y: Vec<Vec<f64>> = vec![
+            vec![1.0],
+            vec![-1.0],
+            vec![-1.0],
         ];
 
         println!("new");
-        let mut model = MLP::new(vec![2, 2, 1]);
+        let mut model = MLP::new(vec![2, 1]);
 
         println!("train");
         model.train(X.clone(), Y.clone(), 0.1, 100000, true);
