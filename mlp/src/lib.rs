@@ -22,21 +22,25 @@ impl MLP {
 
         for l in 0..=L {
             W.push(vec![]);
+
             if l == 0 {
                 continue
             }
 
             for i in 0..=d[l - 1] {
                 W[l].push(vec![]);
+
                 for j in 0..=d[l] {
                     if j == 0 {
                         W[l][i].push(0.0);
-                    }else{
+                    }
+                    else{
                         W[l][i].push(rng.gen::<f64>() * 2.0 - 1.0);
                     }
                 }
             }
         }
+
 
         let mut X: Vec<Vec<f64>> = vec![];
         let mut deltas: Vec<Vec<f64>> = vec![];
@@ -44,6 +48,7 @@ impl MLP {
         for l in 0..=L {
             X.push(vec![]);
             deltas.push(vec![]);
+
             for j in 0..=d[l] {
                 deltas[l].push(0.0);
                 if j == 0 {
@@ -68,6 +73,7 @@ impl MLP {
         for l in 1..=self.L {
             for j in 1..=self.d[l]{
                 let mut total = 0.0;
+                
                 for i in 0..=self.d[l - 1] {
                     total += self.W[l][i][j] * self.X[l - 1][i];
                 }

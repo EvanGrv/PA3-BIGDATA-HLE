@@ -8,11 +8,31 @@ pub struct LinearModel {
     loss_size: usize,
 }
 
+#[repr(C)]
+pub struct LossMonitor {
+    last_loss: f64,
+    loss_change_threshold: f64,
+    min_frequency: usize,
+    max_frequency: usize,
+    current_frequency: usize,
+    last_loss_iteration: usize,
+}
+
+
 // Fonction pour entraîner le modèle linéaire
 fn train(inputs: &[Vec<f64>], targets: &[Vec<f64>], k: usize, learning_rate: f64, n_features: usize, num_iterations: usize, isclassification: bool) -> (Vec<f64>, Vec<f64>, Vec<f64>) {
     let mut weights: Vec<f64> = vec![0.0; n_features * k];
     let mut bias: Vec<f64> = vec![0.0; k];
     let mut loss_values: Vec<f64> = vec![];
+
+    let mut loss_monitor = LossMonitor {
+        last_loss: f64::INFINITY,
+        loss_change_threshold: 0.01,
+        min_frequency: 100,
+        max_frequency: 10000,
+        current_frequency: 1000,
+        last_loss_iteration: 0,
+    };
 
     // Boucle pour les itérations d'entraînement
     for iteration in 0..=num_iterations {
@@ -52,11 +72,14 @@ fn train(inputs: &[Vec<f64>], targets: &[Vec<f64>], k: usize, learning_rate: f64
             bias[c] += learning_rate * errors[c];
         }
 
-        // Vérifier si c'est une itération à afficher (tous les 10000 itérations)
-        if iteration % 10000 == 0 {
+        // Utiliser LossMonitor pour décider quand calculer la perte
+        if iteration % loss_monitor.current_frequency == 0 || iteration == num_iterations {
             let loss = calculate_loss(&weights, &bias, &inputs, &targets, isclassification);
             loss_values.push(loss);  // Ajouter la perte au vecteur loss_values
             println!("Itération: {}, Perte: {}", iteration, loss);
+            
+            // Mise à jour de LossMonitor
+            update_loss_monitor(&mut loss_monitor, loss, iteration);
         }
     }
 
@@ -82,6 +105,19 @@ fn calculate_loss(weights: &[f64], bias: &[f64], inputs: &[Vec<f64>], targets: &
     }
 
     loss / (n_samples * k) as f64
+}
+
+fn update_loss_monitor(monitor: &mut LossMonitor, current_loss: f64, iteration: usize) {
+    let loss_change = (monitor.last_loss - current_loss).abs();
+
+    if loss_change < monitor.loss_change_threshold {
+        monitor.current_frequency = std::cmp::min(monitor.current_frequency * 2, monitor.max_frequency);
+    } else {
+        monitor.current_frequency = std::cmp::max(monitor.current_frequency / 2, monitor.min_frequency);
+    }
+
+    monitor.last_loss = current_loss;
+    monitor.last_loss_iteration = iteration;
 }
 
 // Fonction pour prédire les classes à partir des poids, biais et entrées données
@@ -236,7 +272,3 @@ mod tests {
         main()
     }
 }
-
-
-
-
