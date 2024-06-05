@@ -22,25 +22,21 @@ impl MLP {
 
         for l in 0..=L {
             W.push(vec![]);
-
             if l == 0 {
                 continue
             }
 
             for i in 0..=d[l - 1] {
                 W[l].push(vec![]);
-
                 for j in 0..=d[l] {
                     if j == 0 {
                         W[l][i].push(0.0);
-                    }
-                    else{
+                    }else{
                         W[l][i].push(rng.gen::<f64>() * 2.0 - 1.0);
                     }
                 }
             }
         }
-
 
         let mut X: Vec<Vec<f64>> = vec![];
         let mut deltas: Vec<Vec<f64>> = vec![];
@@ -48,7 +44,6 @@ impl MLP {
         for l in 0..=L {
             X.push(vec![]);
             deltas.push(vec![]);
-
             for j in 0..=d[l] {
                 deltas[l].push(0.0);
                 if j == 0 {
@@ -73,7 +68,6 @@ impl MLP {
         for l in 1..=self.L {
             for j in 1..=self.d[l]{
                 let mut total = 0.0;
-                
                 for i in 0..=self.d[l - 1] {
                     total += self.W[l][i][j] * self.X[l - 1][i];
                 }
@@ -296,7 +290,7 @@ mod tests {
             vec![-1.0],
         ];*/
 
-        let X: Vec<Vec<f64>> = vec![
+        /*let X: Vec<Vec<f64>> = vec![
             vec![1.0, 1.0],
             vec![2.0, 3.0],
             vec![3.0, 3.0],
@@ -314,6 +308,46 @@ mod tests {
         println!("train");
         model.train(X.clone(), Y.clone(), 0.1, 100000, true);
 
+        println!("pred");
+        for k in 0..X.len() {
+            println!("pred {}", k);
+            let pred = model.predict(X[k].clone(), true);
+            println!("{:?}", pred);
+        }*/
+
+        // Générer les données d'entrée X et les étiquettes de classe Y
+        let mut X: Vec<Vec<f64>> = Vec::new();
+        let mut Y: Vec<Vec<f64>> = Vec::new();
+
+        for _ in 0..500 {
+            let x1 = rand::random::<f64>() * 2.0 - 1.0;
+            let x2 = rand::random::<f64>() * 2.0 - 1.0;
+            let p = vec![x1, x2];
+
+            let y = if -p[0] - p[1] - 0.5 > 0.0 && p[1] < 0.0 && p[0] - p[1] - 0.5 < 0.0 {
+                vec![1.0, 0.0, 0.0]
+            } else if -p[0] - p[1] - 0.5 < 0.0 && p[1] > 0.0 && p[0] - p[1] - 0.5 < 0.0 {
+                vec![0.0, 1.0, 0.0]
+            } else if -p[0] - p[1] - 0.5 < 0.0 && p[1] < 0.0 && p[0] - p[1] - 0.5 > 0.0 {
+                vec![0.0, 0.0, 1.0]
+            } else {
+                vec![0.0, 0.0, 0.0]
+            };
+
+            if y != vec![0.0, 0.0, 0.0] {
+                X.push(p);
+                Y.push(y);
+            }
+        }
+
+        // Créer et entraîner le modèle MLP
+        println!("new");
+        let mut model = MLP::new(vec![2, 3]);
+
+        println!("train");
+        model.train(X.clone(), Y.clone(), 0.1, 100000, true);
+
+        // Tester le modèle avec les données d'entraînement
         println!("pred");
         for k in 0..X.len() {
             println!("pred {}", k);
