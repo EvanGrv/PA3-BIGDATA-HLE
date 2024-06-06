@@ -1,9 +1,8 @@
 import numpy as np
 import ctypes
 from matplotlib import pyplot as plt
-from matplotlib.colors import ListedColormap
 
-lib = ctypes.CDLL("target/debug/mlp.dll")
+lib = ctypes.CDLL("..\\mlp\\target\\debug\\mlp.dll")
 
 
 # Définir la structure MLP en Python
@@ -44,34 +43,11 @@ lib.predict_mlp_model.argtypes = [ctypes.POINTER(MLP),
 lib.delete_mlp_model.argtypes = [ctypes.POINTER(MLP)]
 
 
-'''def plot_classification(X, predictions, colors):
-    # Tracé de la séparation des classes
-    x_min, x_max = X[:, 0].min() - 0.1, X[:, 0].max() + 0.1
-    y_min, y_max = X[:, 1].min() - 0.1, X[:, 1].max() + 0.1
-    step = 0.1
-
-    xx, yy = np.meshgrid(np.arange(x_min, x_max, step), np.arange(y_min, y_max, step))
-    grid_points = np.c_[xx.ravel(), yy.ravel()]
-
-    # Tracé des points d'entraînement avec des couleurs différentes pour chaque classe
-    if predictions.ndim == 1:
-        class_0 = X[predictions < 0]  # Filtrer les exemples de classe 0
-        class_1 = X[predictions > 0]  # Filtrer les exemples de classe 1
-    else:
-        class_0 = X[predictions[:, 0] < 0]  # Filtrer les exemples de classe 0
-        class_1 = X[predictions[:, 0] > 0]  # Filtrer les exemples de classe 1
-
-    # Tracer les points des deux classes
-    plt.scatter(class_0[:, 0], class_0[:, 1], color=colors[0], edgecolor='k', label='Classe 0')
-    plt.scatter(class_1[:, 0], class_1[:, 1], color=colors[1], edgecolor='k', label='Classe 1')
-
-    # Afficher le graphique
-    plt.legend()
-    plt.show()'''
-
-def plot_classification(X, predictions, colors, classification):
+def plot_classification(X, predictions, classification):
     # Tracé de la séparation des classes
     if classification:
+        k = len(predictions[0])
+
         if X.shape == 3:
             # Tracé de la séparation des classes pour données 3D
             x_min, x_max = X[:, 0].min() - 0.1, X[:, 0].max() + 0.1
@@ -110,31 +86,25 @@ def plot_classification(X, predictions, colors, classification):
             plt.show()
 
         elif X.shape == 2:
-            # Tracé de la séparation des classes pour données 2D
+            # Prédire les sorties pour une grille de points
             x_min, x_max = X[:, 0].min() - 0.1, X[:, 0].max() + 0.1
             y_min, y_max = X[:, 1].min() - 0.1, X[:, 1].max() + 0.1
-            step = 0.1
-
+            step = 0.01
             xx, yy = np.meshgrid(np.arange(x_min, x_max, step), np.arange(y_min, y_max, step))
             grid_points = np.c_[xx.ravel(), yy.ravel()]
+            grid_predictions = np.zeros((len(grid_points), len(predictions[0])))
 
             # Tracé des points d'entraînement avec des couleurs différentes pour chaque classe
             class_0 = X[predictions[:, 0] < 0]
             class_1 = X[predictions[:, 0] > 0]
-            class_2 = X[np.argmax(predictions, axis=1) == 2]
 
-            plt.scatter(class_0[:, 0], class_0[:, 1], color=colors[0], edgecolor='k', label='Classe 0')
-            plt.scatter(class_1[:, 0], class_1[:, 1], color=colors[1], edgecolor='k', label='Classe 1')
-            plt.scatter(class_2[:, 0], class_2[:, 1], color=colors[2], edgecolor='k', label='Classe 2')
+            plt.scatter(class_0[:, 0], class_0[:, 1], color='blue', edgecolor='k', label='Classe 0')
+            plt.scatter(class_1[:, 0], class_1[:, 1], color='red', edgecolor='k', label='Classe 1')
 
-            # Calcul de la ligne de séparation pour un modèle 2D
-            x_vals = np.array(plt.gca().get_xlim())
-            '''for i in range(k):
-                y_vals = -(x_vals * weights[i * num_X] + bias[i]) / weights[i * num_X + 1]
-                plt.plot(x_vals, y_vals, '--', c='black')'''
+            # Tracer la séparation des classes
+            contour = grid_predictions[:, 0].reshape(xx.shape)
+            plt.contourf(xx, yy, contour, levels=[-np.inf, 0, np.inf], colors=['blue', 'red'], alpha=0.5)
 
-            plt.legend()
-            plt.show()
     else:
         # Régression linéaire
         plt.scatter(X, predictions, color='blue', label='Data points')
@@ -143,90 +113,61 @@ def plot_classification(X, predictions, colors, classification):
 
         if X.shape == 1:
             x_vals = np.linspace(X.min(), X.max(), 100)
-            #y_vals = weights[0] * x_vals + bias[0]
-            #plt.plot(x_vals, y_vals, color='red', label='Regression line')
+            # y_vals = weights[0] * x_vals + bias[0]
+            # plt.plot(x_vals, y_vals, color='red', label='Regression line')
         else:
             raise ValueError("Ce code ne gère actuellement que la régression linéaire pour une seule caractéristique.")
 
-
-def test_train():
-
-    # Cas de test Classification
-
-    # Test 1
-    '''X = np.array([
-        [1, 1],
-        [2, 3],
-        [3, 3]
-    ], dtype=np.float64)
-
-    Y = np.array([
-        [1],
-        [-1],
-        [1]
-    ], dtype=np.float64)
-
-    arr = [2, 1]'''
-
-    # test 2
-    '''X = np.concatenate([np.random.random((50,2)) * 0.9 + np.array([1, 1]), np.random.random((50,2)) * 0.9 + np.array([2, 2])], dtype=np.float64)
-    Y = np.concatenate([np.ones((50, 1)), np.ones((50, 1)) * -1.0], dtype=np.float64)
-    
-    arr = [2, 1]
-    '''
-
-    # test 3
-    '''X = np.array([[1, 0], [0, 1], [0, 0], [1, 1]], dtype=np.float64)
-    Y = np.array([[1, 1, -1, -1]], dtype=np.float64)
-    
-    arr = [2, 5, 1]'''
+    plt.show()
 
 
-    # Test 4
-    '''X = np.random.random((500, 2)).astype(np.float64) * 2.0 - 1.0
-    Y = np.array([1 if abs(p[0]) <= 0.3 or abs(p[1]) <= 0.3 else -1 for p in X], dtype=np.float64)
-    
-    arr = [2, 4, 1]
-    '''
+def show_test(X_train, Y_train, predictions):
+    # Prédire les sorties pour une grille de points
+    x_min, x_max = X_train[:, 0].min() - 0.1, X_train[:, 0].max() + 0.1
+    y_min, y_max = X_train[:, 1].min() - 0.1, X_train[:, 1].max() + 0.1
+    step = 0.01
+    xx, yy = np.meshgrid(np.arange(x_min, x_max, step), np.arange(y_min, y_max, step))
+
+    # Assurez-vous que predictions est 1D si nécessaire
+    if len(predictions.shape) > 1 and predictions.shape[1] == 1:
+        predictions = predictions.ravel()
+
+    # Vérifiez et reshaper predictions
+    if predictions.size != xx.size:
+        raise ValueError(f"Size of predictions ({predictions.size}) does not match the size of the grid ({xx.size})")
+
+    grid_predictions = predictions
+    k = Y_train.shape[1]
+    if k <= 2:
+        # Tracé des points d'entraînement avec des couleurs différentes pour chaque classe
+        class_0 = X_train[Y_train[:, 0] < 0]
+        class_1 = X_train[Y_train[:, 0] > 0]
+
+        plt.scatter(class_0[:, 0], class_0[:, 1], color='blue', edgecolor='k', label='Classe 0')
+        plt.scatter(class_1[:, 0], class_1[:, 1], color='red', edgecolor='k', label='Classe 1')
+
+        # Tracer la séparation des classes
+        contour = grid_predictions.reshape(xx.shape)
+        plt.contourf(xx, yy, contour, levels=[-np.inf, 0, np.inf], colors=['blue', 'red'], alpha=0.5)
+
+    else:
+        # Tracé des points d'entraînement avec des couleurs différentes pour chaque classe
+        class_0 = X_train[Y_train[:, 0] < 0]
+        class_1 = X_train[Y_train[:, 0] > 0]
+        class_2 = X_train[np.argmax(Y_train, axis=1) == 2]
+
+        plt.scatter(class_0[:, 0], class_0[:, 1], color='red', edgecolor='k', label='Classe 0')
+        plt.scatter(class_1[:, 0], class_1[:, 1], color='blue', edgecolor='k', label='Classe 1')
+        plt.scatter(class_2[:, 0], class_2[:, 1], color='green', edgecolor='k', label='Classe 2')
+
+        # Tracer la séparation des classes
+        contour = np.argmax(grid_predictions, axis=1).reshape(xx.shape)
+        plt.contourf(xx, yy, contour, levels=[-np.inf, 0.5, 1.5, np.inf], colors=['blue', 'red', 'green'], alpha=0.4)
+
+    plt.show()
 
 
-    '''X = np.random.random((500, 2)) * 2.0 - 1.0
-    Y = np.array([[1, -1, -1] if -p[0] - p[1] - 0.5 > 0 and p[1] < 0 and p[0] - p[1] - 0.5 < 0 else
-                        [-1, 1, -1] if -p[0] - p[1] - 0.5 < 0 and p[1] > 0 and p[0] - p[1] - 0.5 < 0 else
-                        [-1, -1, 1] if -p[0] - p[1] - 0.5 < 0 and p[1] < 0 and p[0] - p[1] - 0.5 > 0 else
-                        [0, 0, 0] for p in X], dtype=np.float64)
-
-    X = X[[not np.all(arr == [0, 0, 0]) for arr in Y]]
-    Y = Y[[not np.all(arr == [0, 0, 0]) for arr in Y]]
-    
-    arr = [2, 3]
-    '''
-
-    '''X = np.random.random((1000, 2)) * 2.0 - 1.0
-    Y = np.array([[1, 0, 0] if abs(p[0] % 0.5) <= 0.25 and abs(p[1] % 0.5) > 0.25 else [0, 1, 0] if abs(
-        p[0] % 0.5) > 0.25 and abs(p[1] % 0.5) <= 0.25 else [0, 0, 1] for p in X])
-
-    arr = [2, 1, 1, 3]'''
-
-    # Cas de test Régression
-
-    '''X = np.array([
-        [1],
-        [2]
-    ])
-    Y = np.array([
-        [2, 3]
-    ])
-
-    arr = [1, 1]'''
-
-    learning_rate = 0.01
-    nb_iter = 10000
-    classification = False
-
-    print(f"X shape : {X.shape}")
-    print(f"Y chape : {Y.shape}")
-
+def test(X, Y, arr, learning_rate, nb_iter, classification):
     arr_ptr = (ctypes.c_longlong * len(arr))(*arr)
     model_ptr = lib.create_mlp_model(arr_ptr, len(arr))
 
@@ -263,12 +204,89 @@ def test_train():
 
     print(output_np_array)
 
-    colors = {0: 'red', 1: 'blue', 2: 'green'}
-
-    plot_classification(X, output_np_array, colors, classification)
+    show_test(X, Y, output_np_array)
 
     # Libérer la mémoire du modèle
     lib.delete_mlp_model(model_ptr)
+
+
+def test_train():
+    # Cas de test Classification
+
+    # Test 1
+    # X = np.array([
+    #     [1, 1],
+    #     [2, 3],
+    #     [3, 3]
+    # ], dtype=np.float64)
+    #
+    # Y = np.array([
+    #     [1],
+    #     [-1],
+    #     [-1]
+    # ], dtype=np.float64)
+    #
+    # arr = [2, 1]
+
+    # test 2
+    '''X = np.concatenate([np.random.random((50,2)) * 0.9 + np.array([1, 1]), np.random.random((50,2)) * 0.9 + np.array([2, 2])], dtype=np.float64)
+    Y = np.concatenate([np.ones((50, 1)), np.ones((50, 1)) * -1.0], dtype=np.float64)
+    
+    arr = [2, 1]
+    '''
+
+    # test 3 Xor
+    '''X = np.array([[1, 0], [0, 1], [0, 0], [1, 1]], dtype=np.float64)
+    Y = np.array([[1, 1, -1, -1]], dtype=np.float64)
+    
+    arr = [2, 2, 1]'''
+
+    # Test 4 Cross
+    '''X = np.random.random((500, 2)).astype(np.float64) * 2.0 - 1.0
+    Y = np.array([1 if abs(p[0]) <= 0.3 or abs(p[1]) <= 0.3 else -1 for p in X], dtype=np.float64)
+    
+    arr = [2, 4, 1]
+    '''
+
+    # Test 5 multi class
+    X = np.random.random((500, 2)) * 2.0 - 1.0
+    Y = np.array([[1, -1, -1] if -p[0] - p[1] - 0.5 > 0 and p[1] < 0 and p[0] - p[1] - 0.5 < 0 else
+                        [-1, 1, -1] if -p[0] - p[1] - 0.5 < 0 and p[1] > 0 and p[0] - p[1] - 0.5 < 0 else
+                        [-1, -1, 1] if -p[0] - p[1] - 0.5 < 0 and p[1] < 0 and p[0] - p[1] - 0.5 > 0 else
+                        [0, 0, 0] for p in X], dtype=np.float64)
+
+    X = X[[not np.all(arr == [0, 0, 0]) for arr in Y]]
+    Y = Y[[not np.all(arr == [0, 0, 0]) for arr in Y]]
+    
+    arr = [2, 3]
+
+    # Test 6 multi Cross
+    '''X = np.random.random((1000, 2)) * 2.0 - 1.0
+    Y = np.array([[1, 0, 0] if abs(p[0] % 0.5) <= 0.25 and abs(p[1] % 0.5) > 0.25 else [0, 1, 0] if abs(
+        p[0] % 0.5) > 0.25 and abs(p[1] % 0.5) <= 0.25 else [0, 0, 1] for p in X])
+
+    arr = [2, 1, 1, 3]'''
+
+    # Cas de test Régression
+
+    '''X = np.array([
+        [1],
+        [2]
+    ])
+    Y = np.array([
+        [2, 3]
+    ])
+
+    arr = [1, 1]'''
+
+    learning_rate = 0.01
+    nb_iter = 10000
+    classification = True
+
+    print(f"X shape : {X.shape}")
+    print(f"Y chape : {Y.shape}")
+
+    test(X, Y, arr, learning_rate, nb_iter, classification)
 
 
 test_train()

@@ -4,7 +4,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 # Chargement de la bibliothèque C
-lib = ctypes.CDLL("PA3-BIGDATA-HLE/linear_model/target/debug/linear_model.dll")
+lib = ctypes.CDLL("..\\linear_model\\target\\release\\linear_model.dll")
 
 # Définition de la structure LinearModel en Python
 class LinearModel(ctypes.Structure):
@@ -68,6 +68,8 @@ def test(features, outputs, num_samples, num_features, learning_rate, num_iterat
     print("Weights:", weights)
     print("Bias:", bias)
 
+    xx, yy, grid_predictions = 0, 0, 0
+
     # Tracé de la séparation des classes
     if classification:
         if num_features == 3:
@@ -127,12 +129,12 @@ def test(features, outputs, num_samples, num_features, learning_rate, num_iterat
             # Tracé de la séparation des classes pour données 2D
             x_min, x_max = features[:, 0].min() - 0.1, features[:, 0].max() + 0.1
             y_min, y_max = features[:, 1].min() - 0.1, features[:, 1].max() + 0.1
-            step = 0.1
+            step = 0.01
 
             xx, yy = np.meshgrid(np.arange(x_min, x_max, step), np.arange(y_min, y_max, step))
             grid_points = np.c_[xx.ravel(), yy.ravel()]
-
             grid_predictions = np.zeros((len(grid_points), k))
+
             for i in range(len(grid_points)):
                 grid_point_c = grid_points[i].ctypes.data_as(ctypes.POINTER(ctypes.c_double))
                 grid_predictions_c = lib.predict_linear_model(
@@ -146,20 +148,33 @@ def test(features, outputs, num_samples, num_features, learning_rate, num_iterat
                 )
                 grid_predictions[i] = np.ctypeslib.as_array(grid_predictions_c, shape=(k,))
 
-            # Tracé des points d'entraînement avec des couleurs différentes pour chaque classe
-            class_0 = features[outputs[:, 0] < 0]
-            class_1 = features[outputs[:, 0] > 0]
-            class_2 = features[np.argmax(outputs, axis=1) == 2]
+            if k <= 2:
+                # Tracé des points d'entraînement avec des couleurs différentes pour chaque classe
+                class_0 = features[outputs[:, 0] < 0]
+                class_1 = features[outputs[:, 0] > 0]
 
-            plt.scatter(class_0[:, 0], class_0[:, 1], color='blue', edgecolor='k', label='Classe 0')
-            plt.scatter(class_1[:, 0], class_1[:, 1], color='red', edgecolor='k', label='Classe 1')
-            plt.scatter(class_2[:, 0], class_2[:, 1], color='green', edgecolor='k', label='Classe 2')
+                plt.scatter(class_0[:, 0], class_0[:, 1], color='blue', edgecolor='k', label='Classe 0')
+                plt.scatter(class_1[:, 0], class_1[:, 1], color='red', edgecolor='k', label='Classe 1')
 
-            # Calcul de la ligne de séparation pour un modèle 2D
-            x_vals = np.array(plt.gca().get_xlim())
-            for i in range(k):
-                y_vals = -(x_vals * weights[i * num_features] + bias[i]) / weights[i * num_features + 1]
-                plt.plot(x_vals, y_vals, '--', c='black')
+
+                # Tracer la séparation des classes
+                contour = grid_predictions[:, 0].reshape(xx.shape)
+                plt.contourf(xx, yy, contour, levels=[-np.inf, 0, np.inf], colors=['blue', 'red'], alpha=0.5)
+
+            else:
+                # Tracé des points d'entraînement avec des couleurs différentes pour chaque classe
+                class_0 = features[outputs[:, 0] < 0]
+                class_1 = features[outputs[:, 0] > 0]
+                class_2 = features[np.argmax(outputs, axis=1) == 2]
+
+                plt.scatter(class_0[:, 0], class_0[:, 1], color='red', edgecolor='k', label='Classe 0')
+                plt.scatter(class_1[:, 0], class_1[:, 1], color='blue', edgecolor='k', label='Classe 1')
+                plt.scatter(class_2[:, 0], class_2[:, 1], color='green', edgecolor='k', label='Classe 2')
+
+                # Tracer la séparation des classes
+                contour = np.argmax(grid_predictions, axis=1).reshape(xx.shape)
+                plt.contourf(xx, yy, contour, levels=[-np.inf, 0.5, 1.5, np.inf], colors=['blue', 'red', 'green'],
+                             alpha=0.4)
 
             plt.legend()
             plt.show()
@@ -220,6 +235,7 @@ def test(features, outputs, num_samples, num_features, learning_rate, num_iterat
         else:
             raise ValueError("Ce code ne gère actuellement que la régression linéaire pour jusqu'à deux caractéristiques")
 
+    return xx, yy, grid_predictions, features, outputs
 
 # Exemple de Classification
 
@@ -231,53 +247,93 @@ k = 1
 
 test(inputs, outputs, num_samples, num_features, learning_rate, num_iterations, k, True)
 '''
-# test 1: Linear Model
-# inputs = np.array([[1, 1], [2, 3], [3, 3]], dtype=np.float64)
-# outputs = np.array([[1], [-1], [-1]], dtype=np.float64)
 
-# test 2: Linear Multiple
-# inputs = np.concatenate([np.random.random((50,2)) * 0.9 + np.array([1, 1]), np.random.random((50,2)) * 0.9 + np.array([2, 2])])
-# outputs = np.concatenate([np.ones((50, 1)), np.ones((50, 1)) * -1.0])
+def linear_simple() :
+    # test 1: Linear Model
+    inputs = np.array([[1, 1], [2, 3], [3, 3]], dtype=np.float64)
+    outputs = np.array([[1], [-1], [-1]], dtype=np.float64)
 
-# test 3: XOR
-# Ne fonctionne pas pour le modèle linéaire
-# inputs = np.array([[1, 0], [0, 1], [0, 0], [1, 1]], dtype=np.float64)
-# outputs = np.array([1, 1, -1, -1], dtype=np.float64)
+    num_samples, num_features = inputs.shape
+    learning_rate = 0.001
+    num_iterations = 100000
+    k = 1
 
-# inputs = np.array([[2,1], [2,1], [0,1], [2,1]], dtype=np.float64)
-# outputs = np.array([1, 1, -1, -1], dtype=np.float64)
+    return test(inputs, outputs, num_samples, num_features, learning_rate, num_iterations, k, True)
+
+def linear_multiple():
+    # test 2: Linear Multiple
+    inputs = np.concatenate([np.random.random((50,2)) * 0.9 + np.array([1, 1]), np.random.random((50,2)) * 0.9 + np.array([2, 2])])
+    outputs = np.concatenate([np.ones((50, 1)), np.ones((50, 1)) * -1.0])
+
+    num_samples, num_features = inputs.shape
+    learning_rate = 0.001
+    num_iterations = 100000
+    k = 1
+
+    return test(inputs, outputs, num_samples, num_features, learning_rate, num_iterations, k, True)
+
+def xor():
+    # test 3: XOR
+    # Ne fonctionne pas pour le modèle linéaire
+    inputs = np.array([[1, 0], [0, 1], [0, 0], [1, 1]], dtype=np.float64)
+    outputs = np.array([1, 1, -1, -1], dtype=np.float64)
+
+    num_samples, num_features = inputs.shape
+    learning_rate = 0.001
+    num_iterations = 100000
+    k = 2
+
+    return test(inputs, outputs, num_samples, num_features, learning_rate, num_iterations, k, True)
+
+def cross():
+    # test 4: CROSS
+    inputs = np.random.random((500, 2)) * 2.0 - 1.0
+    outputs = np.array([1 if abs(p[0]) <= 0.3 or abs(p[1]) <= 0.3 else -1 for p in inputs])
+    num_samples, num_features = inputs.shape
+    learning_rate = 0.001
+    num_iterations = 100000
+    k = 1
+
+    return test(inputs, outputs, num_samples, num_features, learning_rate, num_iterations, k, True)
+
+def multi_linear_classes():
+    # test 5: Multi Linear 3 class
+    inputs = np.random.random((500, 2)) * 2.0 - 1.0
+    outputs = np.array([[1, -1, -1] if -p[0] - p[1] - 0.5 > 0 and p[1] < 0 and p[0] - p[1] - 0.5 < 0 else
+             [-1, 1, -1] if -p[0] - p[1] - 0.5 < 0 and p[1] > 0 and p[0] - p[1] - 0.5 < 0 else              [-1, -1, 1] if -p[0] - p[1] - 0.5 < 0 and p[1] < 0 and p[0] - p[1] - 0.5 > 0 else
+             [0, 0, 0]for p in inputs], dtype=np.float64)
+
+    inputs = inputs[[not np.all(arr == [0, 0, 0]) for arr in outputs]]
+    outputs = outputs[[not np.all(arr == [0, 0, 0]) for arr in outputs]]
+
+    num_samples, num_features = inputs.shape
+    learning_rate = 0.005
+    num_iterations = 100000
+    k = 3
+
+    return test(inputs, outputs, num_samples, num_features, learning_rate, num_iterations, k, True)
 
 
+def multi_cross():
+    # test 7: Multi Cross
+    inputs = np.random.random((1000, 2)) * 2.0 - 1.0
+    outputs = np.array([[1, 0, 0] if abs(p[0] % 0.5) <= 0.25 and abs(p[1] % 0.5) > 0.25 else [0, 1, 0] if abs(p[0] % 0.5) > 0.25 and abs(p[1] % 0.5) <= 0.25 else [0, 0, 1] for p in inputs])
 
-# test 4: CROSS
-#inputs = np.random.random((500, 2)) * 2.0 - 1.0
-#outputs = np.array([1 if abs(p[0]) <= 0.3 or abs(p[1]) <= 0.3 else -1 for p in inputs])
+    num_samples, num_features = inputs.shape
+    learning_rate = 0.005
+    num_iterations = 100000
+    k = 3
 
-
-# test 6: Multi Linear 3 class
-
-'''
-num_samples, num_features = inputs.shape
-learning_rate = 0.005
-num_iterations = 100000
-k = 3
-
-test(inputs, outputs, num_samples, num_features, learning_rate, num_iterations, k, True)
-'''
-
-# inputs = np.random.random((500, 2)) * 2.0 - 1.0
-# outputs = np.array([[1, -1, -1] if -p[0] - p[1] - 0.5 > 0 and p[1] < 0 and p[0] - p[1] - 0.5 < 0 else
-#             [-1, 1, -1] if -p[0] - p[1] - 0.5 < 0 and p[1] > 0 and p[0] - p[1] - 0.5 < 0 else              [-1, -1, 1] if -p[0] - p[1] - 0.5 < 0 and p[1] < 0 and p[0] - p[1] - 0.5 > 0 else
-#             [0, 0, 0]for p in inputs], dtype=np.float64)
-
-# inputs = inputs[[not np.all(arr == [0, 0, 0]) for arr in outputs]]
-# outputs = outputs[[not np.all(arr == [0, 0, 0]) for arr in outputs]]
+    return test(inputs, outputs, num_samples, num_features, learning_rate, num_iterations, k, True)
 
 
-# test 7
-#inputs = np.random.random((1000, 2)) * 2.0 - 1.0
-#outputs = np.array([[1, 0, 0] if abs(p[0] % 0.5) <= 0.25 and abs(p[1] % 0.5) > 0.25 else [0, 1, 0] if abs(p[0] % 0.5) > 0.25 and abs(p[1] % 0.5) <= 0.25 else [0, 0, 1] for p in X])
-
+def cas_de_test():
+    linear_simple()
+    linear_multiple()
+    #xor()
+    #cross()
+    multi_linear_classes()
+    multi_cross()
 
 
 # Exemple de Régression
@@ -331,9 +387,4 @@ outputs = np.array([
 ])
 '''
 
-num_samples, num_features = inputs.shape
-learning_rate = 0.005
-num_iterations = 100000
-k = 3
-
-test(inputs, outputs, num_samples, num_features, learning_rate, num_iterations, k, True)
+cas_de_test()
