@@ -11,12 +11,12 @@ import rbf
 sys.path.append('C:\\Users\\lbone\\Documents\\Project\\Python_test\\PA3-BIGDATA-HLE\\linear_model')
 import linear_model
 
+
 # sys.path.append('C:\\Users\\lbone\\Documents\\Project\\Python_test\\PA3-BIGDATA-HLE\\mlp')
 # import mlp
 
 
 def rbf_test_show(xx, yy, grid_predictions, X_train, Y_train):
-
     k = len(Y_train[0])
     if k <= 2:
         # Tracé des points d'entraînement avec des couleurs différentes pour chaque classe
@@ -49,107 +49,204 @@ def rbf_test_show(xx, yy, grid_predictions, X_train, Y_train):
     plt.clf()
 
 
-def verification(model, train, test):
+def linear_model_test(test):
+    match test:
+        case "Linear Simple":
+            st.write("""
+            ## Linear Simple
+            """)
+            xx, yy, grid_predictions, X_train, Y_train = linear_model.linear_simple()
+            rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
+
+        case "Linear Multiple":
+            st.write("""
+            ## Linear Multiple
+            """)
+            xx, yy, grid_predictions, X_train, Y_train = linear_model.linear_multiple()
+            rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
+
+        case "Xor":
+            st.write("""
+            ## XOR
+            """)
+            # xx, yy, grid_predictions, X_train, Y_train = linear_model.xor()
+            # rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
+
+        case "Cross":
+            st.write("""
+            ## Cross
+            """)
+            # xx, yy, grid_predictions, X_train, Y_train = linear_model.cross()
+            # rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
+
+        case "Multi Linear 3 classes":
+            st.write("""
+            ## Multi Linear 3 classes
+            """)
+            xx, yy, grid_predictions, X_train, Y_train = linear_model.multi_linear_classes()
+            rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
+
+        case "Multi Cross":
+            st.write("""
+            ## Multi Cross
+            """)
+            xx, yy, grid_predictions, X_train, Y_train = linear_model.multi_cross()
+            rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
+
+        case "All":
+            st.write("""
+            ## Linear Simple
+            """)
+            xx, yy, grid_predictions, X_train, Y_train = linear_model.linear_simple()
+            rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
+
+            st.write("""
+            ## Linear Multiple
+            """)
+            xx, yy, grid_predictions, X_train, Y_train = linear_model.linear_multiple()
+            rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
+
+            st.write("""
+            ## XOR
+            """)
+
+            st.write("""
+            ### XOR ne fonctionne pas
+            """)
+            # xx, yy, grid_predictions, X_train, Y_train = linear_model.xor()
+            # rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
+
+            st.write("""
+            ## Cross
+            """)
+
+            st.write("""
+            ### Cross ne fonctionne pas
+            """)
+            # xx, yy, grid_predictions, X_train, Y_train = linear_model.cross()
+            # rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
+
+            st.write("""
+            ## Multi Linear 3 classes
+            """)
+            xx, yy, grid_predictions, X_train, Y_train = linear_model.multi_linear_classes()
+            rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
+
+            st.write("""
+            ## Multi Cross
+            """)
+            xx, yy, grid_predictions, X_train, Y_train = linear_model.multi_cross()
+            rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
+
+        case _:
+            st.write("Selectionner un test")
+
+
+def rbf_model_test(test):
+    match test:
+        case "Linear Simple":
+            st.write("""
+            ## Linear Simple
+            """)
+            xx, yy, grid_predictions, X_train, Y_train = rbf.linear_simple()
+            rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
+
+        case "Linear Multiple":
+            st.write("""
+            ## Linear Multiple
+            """)
+            xx, yy, grid_predictions, X_train, Y_train = rbf.linear_multiple()
+            rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
+
+        case "Xor":
+            st.write("""
+            ## XOR
+            """)
+            xx, yy, grid_predictions, X_train, Y_train = rbf.xor()
+            rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
+
+        case "Cross":
+            st.write("""
+            ## Cross
+            """)
+            xx, yy, grid_predictions, X_train, Y_train = rbf.cross()
+            rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
+
+        case "Multi Linear 3 classes":
+            st.write("""
+            ## Multi Linear 3 classes
+            """)
+            xx, yy, grid_predictions, X_train, Y_train = rbf.multi_linear_classes()
+            rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
+
+        case "Multi Cross":
+            st.write("""
+            ## Multi Cross
+            """)
+            xx, yy, grid_predictions, X_train, Y_train = rbf.multi_cross()
+            rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
+
+        case "All":
+
+            st.write("""
+            ## Linear Simple
+            """)
+
+            xx, yy, grid_predictions, X_train, Y_train = rbf.linear_simple()
+            rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
+
+            st.write("""
+            ## Linear Multiple
+            """)
+
+            xx, yy, grid_predictions, X_train, Y_train = rbf.linear_multiple()
+            rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
+
+            st.write("""
+            ## XOR
+            """)
+
+            xx, yy, grid_predictions, X_train, Y_train = rbf.xor()
+            rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
+
+            st.write("""
+            ## Cross
+            """)
+
+            xx, yy, grid_predictions, X_train, Y_train = rbf.cross()
+            rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
+
+            st.write("""
+            ## Multi Linear 3 classes
+            """)
+
+            xx, yy, grid_predictions, X_train, Y_train = rbf.multi_linear_classes()
+            rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
+
+            st.write("""
+            ## Multi Cross
+            """)
+
+            xx, yy, grid_predictions, X_train, Y_train = rbf.multi_cross()
+            rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
+
+        case _:
+            st.write("Selectionner un test")
+
+
+def verification(model, train, test, load):
     match model:
         case "Linear Model":
             if train == "True":
                 st.write("True")
-            else:
-                if train == "True":
-                    st.write("True")
-                elif train == "False":
-                    match test:
-                        case "Linear Simple":
-                            st.write("""
-                            ## Linear Simple
-                            """)
-                            xx, yy, grid_predictions, X_train, Y_train = linear_model.linear_simple()
-                            rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
-
-                        case "Linear Multiple":
-                            st.write("""
-                            ## Linear Multiple
-                            """)
-                            xx, yy, grid_predictions, X_train, Y_train = linear_model.linear_multiple()
-                            rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
-
-                        case "Xor":
-                            st.write("""
-                            ## XOR
-                            """)
-                            #xx, yy, grid_predictions, X_train, Y_train = linear_model.xor()
-                            #rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
-
-                        case "Cross":
-                            st.write("""
-                            ## Cross
-                            """)
-                            #xx, yy, grid_predictions, X_train, Y_train = linear_model.cross()
-                            #rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
-
-                        case "Multi Linear 3 classes":
-                            st.write("""
-                            ## Multi Linear 3 classes
-                            """)
-                            xx, yy, grid_predictions, X_train, Y_train = linear_model.multi_linear_classes()
-                            rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
-
-                        case "Multi Cross":
-                            st.write("""
-                            ## Multi Cross
-                            """)
-                            xx, yy, grid_predictions, X_train, Y_train = linear_model.multi_cross()
-                            rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
-
-                        case "All":
-                            st.write("""
-                            ## Linear Simple
-                            """)
-                            xx, yy, grid_predictions, X_train, Y_train = linear_model.linear_simple()
-                            rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
-
-                            st.write("""
-                            ## Linear Multiple
-                            """)
-                            xx, yy, grid_predictions, X_train, Y_train = linear_model.linear_multiple()
-                            rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
-
-                            st.write("""
-                            ## XOR
-                            """)
-
-                            st.write("""
-                            ### XOR ne fonctionne pas
-                            """)
-                            # xx, yy, grid_predictions, X_train, Y_train = linear_model.xor()
-                            # rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
-
-                            st.write("""
-                            ## Cross
-                            """)
-
-                            st.write("""
-                            ### Cross ne fonctionne pas
-                            """)
-                            # xx, yy, grid_predictions, X_train, Y_train = linear_model.cross()
-                            # rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
-
-                            st.write("""
-                            ## Multi Linear 3 classes
-                            """)
-                            xx, yy, grid_predictions, X_train, Y_train = linear_model.multi_linear_classes()
-                            rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
-
-                            st.write("""
-                            ## Multi Cross
-                            """)
-                            xx, yy, grid_predictions, X_train, Y_train = linear_model.multi_cross()
-                            rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
-
-                        case _:
-                            st.write("Selectionner un test")
+            elif train == "False":
+                if load == "False":
+                    linear_model_test(test)
+                # elif load == "True":
                 else:
-                    st.write("Selectionner un entrainement")
+                    st.write("Selectionner load")
+            else:
+                st.write("Selectionner un entrainement")
         case "MLP":
             if train == "True":
                 st.write("True")
@@ -159,95 +256,11 @@ def verification(model, train, test):
             if train == "True":
                 st.write("True")
             elif train == "False":
-                match test:
-                    case "Linear Simple":
-                        st.write("""
-                        ## Linear Simple
-                        """)
-                        xx, yy, grid_predictions, X_train, Y_train = rbf.linear_simple()
-                        rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
-
-                    case "Linear Multiple":
-                        st.write("""
-                        ## Linear Multiple
-                        """)
-                        xx, yy, grid_predictions, X_train, Y_train = rbf.linear_multiple()
-                        rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
-
-                    case "Xor":
-                        st.write("""
-                        ## XOR
-                        """)
-                        xx, yy, grid_predictions, X_train, Y_train = rbf.xor()
-                        rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
-
-                    case "Cross":
-                        st.write("""
-                        ## Cross
-                        """)
-                        xx, yy, grid_predictions, X_train, Y_train = rbf.cross()
-                        rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
-
-                    case "Multi Linear 3 classes":
-                        st.write("""
-                        ## Multi Linear 3 classes
-                        """)
-                        xx, yy, grid_predictions, X_train, Y_train = rbf.multi_linear_classes()
-                        rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
-
-                    case "Multi Cross":
-                        st.write("""
-                        ## Multi Cross
-                        """)
-                        xx, yy, grid_predictions, X_train, Y_train = rbf.multi_cross()
-                        rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
-
-                    case "All":
-
-                        st.write("""
-                        ## Linear Simple
-                        """)
-
-                        xx, yy, grid_predictions, X_train, Y_train = rbf.linear_simple()
-                        rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
-
-                        st.write("""
-                        ## Linear Multiple
-                        """)
-
-                        xx, yy, grid_predictions, X_train, Y_train = rbf.linear_multiple()
-                        rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
-
-                        st.write("""
-                        ## XOR
-                        """)
-
-                        xx, yy, grid_predictions, X_train, Y_train = rbf.xor()
-                        rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
-
-                        st.write("""
-                        ## Cross
-                        """)
-
-                        xx, yy, grid_predictions, X_train, Y_train = rbf.cross()
-                        rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
-
-                        st.write("""
-                        ## Multi Linear 3 classes
-                        """)
-
-                        xx, yy, grid_predictions, X_train, Y_train = rbf.multi_linear_classes()
-                        rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
-
-                        st.write("""
-                        ## Multi Cross
-                        """)
-
-                        xx, yy, grid_predictions, X_train, Y_train = rbf.multi_cross()
-                        rbf_test_show(xx, yy, grid_predictions, X_train, Y_train)
-
-                    case _:
-                        st.write("Selectionner un test")
+                if load == "False":
+                    rbf_model_test(test)
+                # elif load == "True":
+                else:
+                    st.write("Selectionner load")
 
             else:
                 st.write("Selectionner un entrainement")
@@ -278,15 +291,48 @@ train = st.selectbox(
 st.write("You selected:", train)
 
 test = "new"
+load = "new"
 
 if train == "False":
-    test = st.selectbox(
-        "Choisi un test pour le model",
-        ("Linear Simple", "Linear Multiple", "Xor", "Cross", "Multi Linear 3 classes", "Multi Cross", "All"),
+
+    load = st.selectbox(
+        "Veux tu charger un model pré-entrainé ?",
+        ("True", "False"),
         index=None,
-        placeholder="Select Test...",
+        placeholder="Select Load...",
     )
 
-    st.write("You selected:", test)
+    st.write("You selected:", load)
 
-st.button("Start", key="verif", on_click=verification(model, train, test), type="secondary")
+    if load == "True":
+        test_select = st.selectbox(
+            "voulez vous faire un test ?",
+            ("True", "False"),
+            index=None,
+            placeholder="Select Test choice...",
+        )
+        st.write("You selected:", test_select)
+
+        if test_select == "True":
+            test = st.selectbox(
+                "Choisi un test pour le model",
+                ("Linear Simple", "Linear Multiple", "Xor", "Cross", "Multi Linear 3 classes", "Multi Cross", "All"),
+                index=None,
+                placeholder="Select Test...",
+            )
+
+            st.write("You selected:", test)
+
+        elif test_select == "False":
+            st.write("Charger un model pré-entrainé")
+    elif load == "False":
+        test = st.selectbox(
+            "Choisi un test pour le model",
+            ("Linear Simple", "Linear Multiple", "Xor", "Cross", "Multi Linear 3 classes", "Multi Cross", "All"),
+            index=None,
+            placeholder="Select Test...",
+        )
+
+        st.write("You selected:", test)
+
+st.button("Start", key="verif", on_click=verification(model, train, test, load), type="secondary")
