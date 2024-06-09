@@ -5,14 +5,14 @@ import numpy as np
 
 import sys
 
-sys.path.append('C:\\Users\\lbone\\Documents\\Project\\Python_test\\PA3-BIGDATA-HLE\\rbf')
+sys.path.append('..\\rbf')
 import rbf
 
-sys.path.append('C:\\Users\\lbone\\Documents\\Project\\Python_test\\PA3-BIGDATA-HLE\\linear_model')
+sys.path.append('..\\linear_model')
 import linear_model
 
 
-# sys.path.append('C:\\Users\\lbone\\Documents\\Project\\Python_test\\PA3-BIGDATA-HLE\\mlp')
+# sys.path.append('..\\mlp')
 # import mlp
 
 
@@ -305,26 +305,11 @@ if train == "False":
     st.write("You selected:", load)
 
     if load == "True":
-        test_select = st.selectbox(
-            "voulez vous faire un test ?",
-            ("True", "False"),
-            index=None,
-            placeholder="Select Test choice...",
-        )
-        st.write("You selected:", test_select)
+        st.write("Charger un model pré-entrainé")
 
-        if test_select == "True":
-            test = st.selectbox(
-                "Choisi un test pour le model",
-                ("Linear Simple", "Linear Multiple", "Xor", "Cross", "Multi Linear 3 classes", "Multi Cross", "All"),
-                index=None,
-                placeholder="Select Test...",
-            )
+        # Interface pour uploader un fichier
+        uploaded_file = st.file_uploader("Choisissez un fichier JSON", type="json")
 
-            st.write("You selected:", test)
-
-        elif test_select == "False":
-            st.write("Charger un model pré-entrainé")
     elif load == "False":
         test = st.selectbox(
             "Choisi un test pour le model",

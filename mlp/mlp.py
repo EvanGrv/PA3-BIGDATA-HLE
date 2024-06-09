@@ -120,6 +120,28 @@ def plot_classification(X, predictions, classification):
 
     plt.show()
 
+def plot_classification2(X, weights, bias, colors):
+    x_min, x_max = X[:, 0].min() - 0.1, X[:, 0].max() + 0.1
+    y_min, y_max = X[:, 1].min() - 0.1, X[:, 1].max() + 0.1
+
+    # Générer une grille de points couvrant tout l'espace 2D
+    xx, yy = np.meshgrid(np.linspace(x_min, x_max, 100),
+                         np.linspace(y_min, y_max, 100))
+
+    # Calculer les valeurs de décision
+    Z = np.dot(np.c_[xx.ravel(), yy.ravel()], weights) + bias
+    Z = (Z > 0).astype(int)
+    Z = Z.reshape(xx.shape)
+
+    # Tracer les points de données avec les couleurs des classes prédites
+    plt.scatter(X[:, 0], X[:, 1], c=[colors[int(p > 0)] for p in np.dot(X, weights) + bias], edgecolor='k')
+
+    # Tracer la ligne de séparation
+    plt.contour(xx, yy, Z, levels=[0.5], colors='k', linewidths=[2])
+
+    # Afficher le graphique
+    plt.show()
+
 
 def show_test(X_train, Y_train, predictions):
     # Prédire les sorties pour une grille de points
@@ -204,7 +226,9 @@ def test(X, Y, arr, learning_rate, nb_iter, classification):
 
     print(output_np_array)
 
-    show_test(X, Y, output_np_array)
+    #show_test(X, Y, output_np_array)
+
+    plot_classification2(X, weights, bias, colors)
 
     # Libérer la mémoire du modèle
     lib.delete_mlp_model(model_ptr)
