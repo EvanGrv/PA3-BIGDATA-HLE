@@ -307,8 +307,10 @@ if train == "False":
     if load == "True":
         st.write("Charger un model pré-entrainé")
 
+        default_json_path = "../"
+
         # Interface pour uploader un fichier
-        uploaded_file = st.file_uploader("Choisissez un fichier JSON", type="json")
+        json_file = st.text_input("Entrez le chemin vers le model pré-entrainé", value=default_json_path)
 
     elif load == "False":
         test = st.selectbox(
@@ -319,5 +321,13 @@ if train == "False":
         )
 
         st.write("You selected:", test)
+
+elif train == "True":
+    st.write("Charger votre DataSet")
+
+    default_data_path = "../DataSet/"
+
+    data_path = st.text_input("Entrez le chemin vers le DataSet", value=default_data_path)
+
 
 st.button("Start", key="verif", on_click=verification(model, train, test, load), type="secondary")

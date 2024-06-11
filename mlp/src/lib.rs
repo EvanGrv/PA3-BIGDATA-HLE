@@ -1,67 +1,75 @@
 use rand::Rng;
+use serde::{Serialize, Deserialize};
+use serde_json;
+use std::os::raw::c_char;
+use std::ffi::CStr;
 
-#[repr(C)]
-struct MLP {
+// Définition de la structure du modèle MLP
+#[derive(Serialize, Deserialize)]
+pub struct MLP {
     d: Vec<usize>,
     W: Vec<Vec<Vec<f64>>>,
     L: usize,
     X: Vec<Vec<f64>>,
-    deltas: Vec<Vec<f64>>
+    deltas: Vec<Vec<f64>>,
+    loss: Vec<f64>,
 }
 
 impl MLP {
     fn new(npl: Vec<usize>) -> MLP {
 
-        println!("new");
-
-        let d: Vec<usize> = npl.iter().cloned().collect();
-        let mut W: Vec<Vec<Vec<f64>>> = vec![];
+        let d: Vec<usize> = npl.to_vec();
+        let mut W: Vec<Vec<Vec<f64>>> = Vec::new();
         let L: usize = npl.len() - 1;
 
-        let mut rng = rand::thread_rng();
+        let rng = rand::thread_rng();
 
         for l in 0..=L {
-            W.push(vec![]);
+            W.push(Vec::new());
             if l == 0 {
                 continue
             }
 
             for i in 0..=d[l - 1] {
-                W[l].push(vec![]);
+                W[l].push(Vec::new());
                 for j in 0..=d[l] {
                     if j == 0 {
                         W[l][i].push(0.0);
                     }else{
-                        W[l][i].push(rng.gen::<f64>() * 2.0 - 1.0);
+                        W[l][i].push(rand::thread_rng().gen_range(-1.0..1.0));
                     }
                 }
             }
         }
 
-        let mut X: Vec<Vec<f64>> = vec![];
-        let mut deltas: Vec<Vec<f64>> = vec![];
-
+        let mut X = Vec::new();
         for l in 0..=L {
-            X.push(vec![]);
-            deltas.push(vec![]);
-            for j in 0..=d[l] {
-                deltas[l].push(0.0);
-                if j == 0 {
-                    X[l].push(1.0);
-                }else {
-                    X[l].push(0.0);
-                }
+            X.push(Vec::new());
+            for j in 0..=npl[l] {
+                X[l].push(if j == 0 {
+                    1.0
+                } else {
+                    -1.0
+                });
             }
         }
 
-        println!("self.X[0] len: {}", X[0].len());
+        let mut deltas = Vec::new();
+        for l in 0..=L {
+            deltas.push(Vec::new());
+            for _j in 0..=npl[l] {
+                deltas[l].push(0.0);
+            }
+        }
 
-        MLP { d, W, L, X, deltas }
+        let loss = Vec::new();
+
+        MLP { d, W, L, X, deltas, loss }
     }
 
-    fn _propagate(&mut self, sample_inputs: Vec<f64>, is_classification: bool) {
+    fn propagate(&mut self, sample_inputs: &Vec<f64>, is_classification: bool) {
 
-        for j in 0..sample_inputs.len() {
+        for j in 0..self.d[0] {
             self.X[0][j + 1] = sample_inputs[j];
         }
 
@@ -72,7 +80,7 @@ impl MLP {
                     total += self.W[l][i][j] * self.X[l - 1][i];
                 }
 
-                if is_classification || l < self.L {
+                if is_classification || l <= self.L {
                     total = total.tanh()
                 }
 
@@ -82,46 +90,49 @@ impl MLP {
     }
 
     fn predict(&mut self, sample_inputs: Vec<f64>, is_classification: bool) -> Vec<f64> {
-
-        println!("pred");
-
-        self._propagate(sample_inputs, is_classification);
+        self.propagate(&sample_inputs, is_classification);
         let pred = self.X[self.L][1..].to_vec();
         pred
     }
 
-    fn train(&mut self,
-             all_samples_inputs: Vec<Vec<f64>>,
-             all_samples_expected_outputs: Vec<Vec<f64>>,
-             alpha: f64,
-             nb_iter: i64,
-             is_classification: bool)
-    {
-        println!("train");
+    pub fn loss(outputs: &[f64], expected_outputs: &[f64]) -> f64 {
+        let mut loss = 0.0;
+        for (output, expected) in outputs.iter().zip(expected_outputs.iter()) {
+            loss += (output - expected).powi(2);
+        }
+        loss / (2.0 * outputs.len() as f64)
+    }
 
-        let mut rng = rand::thread_rng();
+    pub fn train(
+        &mut self,
+        all_samples_inputs: &[Vec<f64>],
+        all_samples_expected_outputs: &[Vec<f64>],
+        is_classification: bool,
+        iteration_count: usize,
+        alpha: f64,
+    ) {
+        for _it in 0..iteration_count {
+            let k = rand::thread_rng().gen_range(0..all_samples_inputs.len());
+            let inputs_k = &all_samples_inputs[k];
+            let y_k = &all_samples_expected_outputs[k];
 
-        for it in 0..=nb_iter {
-            let k = rng.gen_range(0..all_samples_inputs.len());
-            let samples_inputs: Vec<f64> = all_samples_inputs[k].clone();
-            let sample_expected_outputs: Vec<f64> = all_samples_expected_outputs[k].clone();
-
-            self._propagate(samples_inputs, is_classification);
+            self.propagate(inputs_k, is_classification);
 
             for j in 1..=self.d[self.L] {
-                self.deltas[self.L][j] = self.X[self.L][j] - sample_expected_outputs[j - 1];
+                self.deltas[self.L][j] = self.X[self.L][j] - y_k[j - 1];
                 if is_classification {
-                    self.deltas[self.L][j] *= 1.0 - self.X[self.L][j] * self.X[self.L][j];
+                    // dans le cas de la classification, multiplier les semi-gradients par la dérivée de la fonction d'activation tanh
+                    self.deltas[self.L][j] *= 1.0 - self.X[self.L][j].powi(2);
                 }
             }
 
-            for l in (2..=self.L).rev() {
+            for l in (1..=self.L).rev() {
                 for i in 1..=self.d[l - 1] {
                     let mut total = 0.0;
                     for j in 1..=self.d[l] {
-                        total += self.W[l][i][j] * self.X[l - 1][i];
+                        total += self.W[l][i][j] * self.deltas[l][j];
                     }
-                    total *= 1.0 - self.X[l - 1][i] * self.X[l - 1][i];
+                    self.deltas[l - 1][i] = (1.0 - self.X[l - 1][i].powi(2)) * total;
                 }
             }
 
@@ -132,142 +143,117 @@ impl MLP {
                     }
                 }
             }
-        }
-    }
-}
 
-#[no_mangle]
-extern "C" fn create_mlp_model(arr_ptr: *mut i64, arr_len: usize) -> *mut MLP {
-
-    println!("create");
-
-    // Créer un slice mutable à partir du pointeur `arr` en utilisant la fonction `from_raw_parts_mut`.
-    let slice: &mut [i64] = unsafe { std::slice::from_raw_parts_mut(arr_ptr, arr_len) };
-
-    // Convertir le slice mutable en Vec<usize> en clonant chaque élément de l'ancien type vers le nouveau type.
-    let arr: Vec<usize> = slice.iter().map(|&x| x as usize).collect();
-
-    let mut model_box = Box::new(MLP::new(arr));
-
-    Box::into_raw(model_box)
-}
-
-
-#[no_mangle]
-extern "C" fn train_mlp_model(model: *mut MLP,
-                              dataset_inputs: *const f64,
-                              lines: i64,
-                              columns: i64,
-                              dataset_outputs: *const f64,
-                              output_columns: i64,
-                              alpha: f64,
-                              nb_iter: i64,
-                              is_classification: bool) {
-    unsafe {
-        // Vérifier si le pointeur du modèle n'est pas nul
-        if model.is_null() {
-            panic!("Le pointeur du modèle est nul !");
-        }
-
-        println!("train python");
-
-        // Convertir les pointeurs des données d'entrée et de sortie en slices
-        let inputs_slice = std::slice::from_raw_parts(dataset_inputs, (lines * columns) as usize);
-        let outputs_slice = std::slice::from_raw_parts(dataset_outputs, (lines * output_columns) as usize);
-
-        println!("{}", (lines * columns) as usize);
-        println!("line {}", (lines) as usize);
-        println!("col {}", (columns) as usize);
-
-        // Convertir les slices en Vec<Vec<f64>> pour les entrées et les sorties
-        let mut all_samples_inputs: Vec<Vec<f64>> = Vec::new();
-        let mut all_samples_outputs: Vec<Vec<f64>> = Vec::new();
-
-        for i in 0..lines {
-            let mut input_row = Vec::new();
-            for j in 0..columns {
-                input_row.push(inputs_slice[(i * columns + j) as usize]);
+            if _it % 50000 == 0 || _it == (iteration_count - 1) {
+                let mut total_loss = 0.0;
+                for (inputs, expected_outputs) in all_samples_inputs.iter().zip(all_samples_expected_outputs.iter()) {
+                    self.propagate(inputs, is_classification);
+                    let outputs = &self.X[self.L][1..];
+                    let example_loss = MLP::loss(outputs, expected_outputs);
+                    total_loss += example_loss;
+                }
+                let average_loss = total_loss / all_samples_inputs.len() as f64;
+                self.loss.push(average_loss);
+                println!("Iteration: {}, Average Loss: {}", _it, average_loss);
             }
-            all_samples_inputs.push(input_row);
         }
+    }
 
-        for i in 0..lines {
-            let mut output_row = Vec::new();
-            for j in 0..output_columns {
-                output_row.push(outputs_slice[(i * output_columns + j) as usize]);
+    // Méthode pour enregistrer le modèle dans un fichier au format JSON
+    pub fn save_model(&self, file_path: &str) {
+        let model_json = serde_json::to_string(self).map_err(|err| {
+            eprintln!("Failed to serialize model: {}", err);
+            err
+        });
+        if let Ok(json) = model_json {
+            if let Err(err) = std::fs::write(file_path, json) {
+                eprintln!("Failed to write model to file: {}", err);
             }
-            all_samples_outputs.push(output_row);
         }
+    }
 
-        // Appeler la méthode train du modèle MLP
-        (*model).train(all_samples_inputs,
-                       all_samples_outputs,
-                       alpha,
-                       nb_iter,
-                       is_classification);
+    // Méthode statique pour charger le modèle depuis un fichier JSON
+    pub fn load_model(file_path: &str) -> Result<MLP, Box<dyn std::error::Error>> {
+        let model_json = std::fs::read_to_string(file_path)?;
+        let mlp = serde_json::from_str(&model_json)?;
+        Ok(mlp)
+    }
+
+}
+
+// Fonctions d'interface C pour communiquer avec le modèle depuis d'autres langages
+#[no_mangle]
+pub extern "C" fn create_mlp(npl: *const u32, npl_len: usize) -> Box<MLP> {
+    let npl_slice = unsafe { std::slice::from_raw_parts(npl, npl_len) };
+    let npl_vec: Vec<usize> = npl_slice.iter().map(|&val| val as usize).collect();
+    let mlp = MLP::new(npl_vec);
+    Box::new(mlp)
+}
+
+#[no_mangle]
+pub extern "C" fn load_mlp(file_path: *const c_char) -> *mut MLP {
+    let c_str = unsafe { CStr::from_ptr(file_path) };
+    let str_slice = c_str.to_str().unwrap_or("");
+    let mlp = MLP::load_model(str_slice).unwrap_or_else(|_| panic!("Failed to load model from {}", str_slice));
+    Box::into_raw(Box::new(mlp))
+}
+
+#[no_mangle]
+pub extern "C" fn mlp_predict(
+    mlp: &mut MLP,
+    inputs: *const f64,
+    inputs_len: usize,
+    is_classification: bool,
+) -> *mut f64 {
+    let slice = unsafe { std::slice::from_raw_parts(inputs, inputs_len) };
+    let slice_vec: Vec<f64> = slice.iter().map(|&val| val as f64).collect();
+    let outputs = mlp.predict(slice_vec, is_classification);
+    Box::into_raw(outputs.into_boxed_slice()) as *mut f64
+}
+
+#[no_mangle]
+pub extern "C" fn mlp_free(ptr: *mut f64) {
+    if ptr.is_null() {
+        return;
+    }
+    unsafe {
+        drop(Box::from_raw(ptr));
     }
 }
 
 #[no_mangle]
-extern "C" fn predict_mlp_model(model: *mut MLP,
-                                sample_inputs: *const f64,
-                                lines: i64,
-                                columns: i64,
-                                is_classification: bool) -> *mut f64 {
-    unsafe {
-        // Vérifier si le pointeur du modèle n'est pas nul
-        if model.is_null() {
-            panic!("Le pointeur du modèle est nul !");
+pub extern "C" fn train_mlp(
+    mlp: &mut MLP,
+    all_samples_inputs: *const f64,
+    all_samples_inputs_row_len: usize,
+    all_samples_outputs: *const f64,
+    all_samples_outputs_len: usize,
+    is_classification: bool,
+    iteration_count: usize,
+    alpha: f64,
+) {
+    let inputs_slice = unsafe { std::slice::from_raw_parts(all_samples_inputs, all_samples_inputs_row_len * mlp.d[0]) };
+    let outputs_slice = unsafe { std::slice::from_raw_parts(all_samples_outputs, all_samples_outputs_len * mlp.d[mlp.d.len() - 1]) };
+    let rows = all_samples_inputs_row_len;
+    let cols = mlp.d[0];
+
+    let mut inputs: Vec<Vec<f64>> = vec![vec![0.0; cols]; rows];
+    for i in 0..rows {
+        for j in 0..cols {
+            inputs[i][j] = inputs_slice[i * cols + j];
         }
-
-        println!("pred python");
-
-        // Convertir le pointeur des échantillons d'entrée en slice
-        let inputs_slice = std::slice::from_raw_parts(sample_inputs, (lines * columns) as usize);
-
-        // Convertir les slices en Vec<Vec<f64>> pour les entrées et les sorties
-        let mut all_samples_inputs: Vec<Vec<f64>> = Vec::new();
-
-        for i in 0..lines {
-            let mut input_row = Vec::new();
-            for j in 0..columns {
-                input_row.push(inputs_slice[(i * columns + j) as usize]);
-            }
-            all_samples_inputs.push(input_row);
-        }
-
-        let mut pred: Vec<Vec<f64>> = vec![];
-
-        for k in 0..all_samples_inputs.len() {
-            println!("pred {}", k);
-            let pred_value = (*model).predict(all_samples_inputs[k].clone(), is_classification);
-            pred.push(pred_value);
-            println!("{:?}", pred);
-        }
-
-        println!("Prediction : {:?}", pred);
-
-        // Aplatir pred en un Vec<f64>
-        let pred_flattened: Vec<f64> = pred.into_iter().flatten().collect();
-
-        println!("Prediction_flat : {:?}", pred_flattened);
-
-        // Convertir pred_flattened en un tableau boxé et obtenir un pointeur vers le premier élément
-        let output_ptr = Box::into_raw(pred_flattened.into_boxed_slice()) as *mut f64;
-
-        output_ptr
     }
-}
 
-#[no_mangle]
-extern "C" fn delete_mlp_model(model: *mut MLP) {
-    println!("del");
-
-    unsafe {
-        let _ = Box::from_raw(model);
+    let mut outputs = vec![vec![0.0; mlp.d[mlp.d.len() - 1]]; all_samples_outputs_len];
+    for i in 0..all_samples_outputs_len {
+        for j in 0..mlp.d[mlp.d.len() - 1] {
+            outputs[i][j] = outputs_slice[i * mlp.d[mlp.d.len() - 1] + j];
+        }
     }
-}
 
+    mlp.train(&inputs, &outputs, is_classification, iteration_count, alpha);
+    mlp.save_model("./mlp_model.json");
+}
 
 #[cfg(test)]
 mod tests {
@@ -275,84 +261,6 @@ mod tests {
 
     #[test]
     fn test_train() {
-        // Définition des listes X et Y
-        /*let X: Vec<Vec<f64>> = vec![
-            vec![0.0, 0.0],
-            vec![0.0, 1.0],
-            vec![1.0, 0.0],
-            vec![1.0, 1.0]
-        ];
 
-        let Y: Vec<Vec<f64>> = vec![
-            vec![-1.0],
-            vec![1.0],
-            vec![1.0],
-            vec![-1.0],
-        ];*/
-
-        /*let X: Vec<Vec<f64>> = vec![
-            vec![1.0, 1.0],
-            vec![2.0, 3.0],
-            vec![3.0, 3.0],
-        ];
-
-        let Y: Vec<Vec<f64>> = vec![
-            vec![1.0],
-            vec![-1.0],
-            vec![-1.0],
-        ];
-
-        println!("new");
-        let mut model = MLP::new(vec![2, 1]);
-
-        println!("train");
-        model.train(X.clone(), Y.clone(), 0.1, 100000, true);
-
-        println!("pred");
-        for k in 0..X.len() {
-            println!("pred {}", k);
-            let pred = model.predict(X[k].clone(), true);
-            println!("{:?}", pred);
-        }*/
-
-        // Générer les données d'entrée X et les étiquettes de classe Y
-        let mut X: Vec<Vec<f64>> = Vec::new();
-        let mut Y: Vec<Vec<f64>> = Vec::new();
-
-        for _ in 0..500 {
-            let x1 = rand::random::<f64>() * 2.0 - 1.0;
-            let x2 = rand::random::<f64>() * 2.0 - 1.0;
-            let p = vec![x1, x2];
-
-            let y = if -p[0] - p[1] - 0.5 > 0.0 && p[1] < 0.0 && p[0] - p[1] - 0.5 < 0.0 {
-                vec![1.0, 0.0, 0.0]
-            } else if -p[0] - p[1] - 0.5 < 0.0 && p[1] > 0.0 && p[0] - p[1] - 0.5 < 0.0 {
-                vec![0.0, 1.0, 0.0]
-            } else if -p[0] - p[1] - 0.5 < 0.0 && p[1] < 0.0 && p[0] - p[1] - 0.5 > 0.0 {
-                vec![0.0, 0.0, 1.0]
-            } else {
-                vec![0.0, 0.0, 0.0]
-            };
-
-            if y != vec![0.0, 0.0, 0.0] {
-                X.push(p);
-                Y.push(y);
-            }
-        }
-
-        // Créer et entraîner le modèle MLP
-        println!("new");
-        let mut model = MLP::new(vec![2, 3]);
-
-        println!("train");
-        model.train(X.clone(), Y.clone(), 0.1, 100000, true);
-
-        // Tester le modèle avec les données d'entraînement
-        println!("pred");
-        for k in 0..X.len() {
-            println!("pred {}", k);
-            let pred = model.predict(X[k].clone(), true);
-            println!("{:?}", pred);
-        }
     }
 }
