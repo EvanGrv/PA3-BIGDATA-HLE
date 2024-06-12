@@ -338,53 +338,117 @@ def cas_de_test():
 
 # Exemple de Régression
 # Paramètres à utiliser:
-'''
-num_samples, num_features = inputs.shape
-learning_rate = 0.001
-num_iterations = 100000
-k = 1
-
-test(inputs, outputs, num_samples, num_features, learning_rate, num_iterations, k, False)
-'''
 
 # Test 1
-'''
-inputs = np.array([
-      [5.0],
-      [2.0]
-])
-outputs = np.array([
-      4.0,
-      6.0
-])
-'''
+def linear_simple_2D() :
+    inputs = np.array([
+        [5.0],
+        [2.0]
+    ])
+    outputs = np.array([
+        4.0,
+        6.0
+    ])
+
+    num_samples, num_features = inputs.shape
+    learning_rate = 0.001
+    num_iterations = 100000
+    k = 1
+
+    return test(inputs, outputs, num_samples, num_features, learning_rate, num_iterations, k, False)
+
 
 # Test 2
-'''
-inputs = np.array([
-      [1],
-      [2],
-      [3]
-])
-outputs = np.array([
-      2,
-      3,
-      2.5
-])
-'''
+def non_linear_simple_2D():
+    inputs = np.array([
+        [1],
+        [2],
+        [3]
+    ])
+    outputs = np.array([
+        2,
+        3,
+        2.5
+    ])
+
+    num_samples, num_features = inputs.shape
+    learning_rate = 0.001
+    num_iterations = 100000
+    k = 1
+
+    return test(inputs, outputs, num_samples, num_features, learning_rate, num_iterations, k, False)
+
 
 #Test 3
-'''
-inputs = np.array([
-      [1, 1],
-      [2, 2],
-      [3, 1]
-])
-outputs = np.array([
-    2,
-    3,
-    2.5
-])
-'''
+def linear_simple_3D():
+    inputs = np.array([
+        [1, 1],
+        [2, 2],
+        [3, 1]
+    ])
+    outputs = np.array([
+        2,
+        3,
+        2.5
+    ])
 
-cas_de_test()
+    num_samples, num_features = inputs.shape
+    learning_rate = 0.001
+    num_iterations = 100000
+    k = 1
+
+    return test(inputs, outputs, num_samples, num_features, learning_rate, num_iterations, k, False)
+
+#Test 4
+def linear_tricky_3D():
+    inputs = np.array([
+        [1, 1],
+        [2, 2],
+        [3, 3]
+    ])
+    outputs = np.array([
+        1,
+        2,
+        3
+    ])
+
+    num_samples, num_features = inputs.shape
+    learning_rate = 0.001
+    num_iterations = 100000
+    k = 1
+
+    return test(inputs, outputs, num_samples, num_features, learning_rate, num_iterations, k, False)
+
+
+#Test 5
+def non_linear_tricky_3D():
+    inputs = np.array([
+        [1, 0],
+        [0, 1],
+        [1, 1],
+        [0, 0],
+    ])
+    outputs = np.array([
+        2,
+        1,
+        -2,
+        -1
+    ])
+
+    num_samples, num_features = inputs.shape
+    learning_rate = 0.001
+    num_iterations = 100000
+    k = 1
+
+    return test(inputs, outputs, num_samples, num_features, learning_rate, num_iterations, k, False)
+
+def cas_de_test_régression():
+    linear_simple_2D()
+    non_linear_simple_2D()
+    linear_simple_3D()
+    linear_tricky_3D()
+    non_linear_tricky_3D()
+
+
+#cas_de_test()
+cas_de_test_régression()
