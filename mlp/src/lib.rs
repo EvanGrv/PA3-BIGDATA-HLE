@@ -112,6 +112,7 @@ impl MLP {
         alpha: f64,
     ) {
         for _it in 0..iteration_count {
+            println!("{}", all_samples_inputs.len());
             let k = rand::thread_rng().gen_range(0..all_samples_inputs.len());
             let inputs_k = &all_samples_inputs[k];
             let y_k = &all_samples_expected_outputs[k];
@@ -144,6 +145,7 @@ impl MLP {
                 }
             }
 
+            println!("calcul loss");
             if _it % 50000 == 0 || _it == (iteration_count - 1) {
                 let mut total_loss = 0.0;
                 for (inputs, expected_outputs) in all_samples_inputs.iter().zip(all_samples_expected_outputs.iter()) {
@@ -170,6 +172,8 @@ impl MLP {
                 eprintln!("Failed to write model to file: {}", err);
             }
         }
+
+        println!("model save !!!");
     }
 
     // Méthode statique pour charger le modèle depuis un fichier JSON
@@ -197,6 +201,15 @@ pub extern "C" fn load_mlp(file_path: *const c_char) -> *mut MLP {
     let mlp = MLP::load_model(str_slice).unwrap_or_else(|_| panic!("Failed to load model from {}", str_slice));
     Box::into_raw(Box::new(mlp))
 }
+
+#[no_mangle]
+pub extern "C" fn save_mlp(mlp: &mut MLP, file_path: *const c_char) {
+    let c_str = unsafe { CStr::from_ptr(file_path) };
+    let str_slice = c_str.to_str().unwrap_or("");
+
+    mlp.save_model(str_slice);
+}
+
 
 #[no_mangle]
 pub extern "C" fn mlp_predict(
@@ -237,12 +250,18 @@ pub extern "C" fn train_mlp(
     let rows = all_samples_inputs_row_len;
     let cols = mlp.d[0];
 
+    assert_eq!(inputs_slice.len(), rows * cols, "Input slice length mismatch!");
+
     let mut inputs: Vec<Vec<f64>> = vec![vec![0.0; cols]; rows];
     for i in 0..rows {
         for j in 0..cols {
             inputs[i][j] = inputs_slice[i * cols + j];
+            //println!("{}, {},{}", inputs[i][j], i,j)
         }
     }
+
+    let out_rows = all_samples_outputs_len;
+    let out_cols = mlp.d[mlp.d.len() - 1];
 
     let mut outputs = vec![vec![0.0; mlp.d[mlp.d.len() - 1]]; all_samples_outputs_len];
     for i in 0..all_samples_outputs_len {
@@ -252,7 +271,8 @@ pub extern "C" fn train_mlp(
     }
 
     mlp.train(&inputs, &outputs, is_classification, iteration_count, alpha);
-    mlp.save_model("./mlp_model.json");
+    //println!("save model");
+    //mlp.save_model("./mlp_model.json");
 }
 
 #[cfg(test)]
