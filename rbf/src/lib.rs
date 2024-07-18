@@ -141,7 +141,8 @@ impl RBFNetwork {
 
     // Méthode pour effectuer l'entraînement du réseau RBF
     pub fn fit(&mut self, data: &[Point], targets: &[Vec<f64>], num_iterations: usize, num_centers: usize) {
-        self.kmeans(data, num_centers, 100);
+        // self.kmeans(data, num_centers, 100);
+        self.kmeans(data, num_centers, num_iterations);
         for _ in 0..num_iterations {
             self.fit_linear_regression(data, targets, 0.0001);
         }

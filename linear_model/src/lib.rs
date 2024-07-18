@@ -1,10 +1,23 @@
+use std::error::Error;
+use std::ffi::{c_char, CStr};
+use std::{fs, slice};
 use rand::Rng;
+use serde::{Serialize, Deserialize};
+
 
 #[repr(C)]
 pub struct LinearModel {
     weights: *mut f64,
     bias: *mut f64,
     loss: *mut f64,
+    loss_size: usize,
+}
+
+#[derive(Serialize, Deserialize)]
+struct SerializableLinearModel {
+    weights: Vec<f64>,
+    bias: Vec<f64>,
+    loss: Vec<f64>,
     loss_size: usize,
 }
 
@@ -53,7 +66,7 @@ fn train(inputs: &[Vec<f64>], targets: &[Vec<f64>], k: usize, learning_rate: f64
         }
 
         // Vérifier si c'est une itération à afficher (tous les 10000 itérations)
-        if iteration % 10000 == 0 {
+        if iteration % 100 == 0 {
             let loss = calculate_loss(&weights, &bias, &inputs, &targets, isclassification);
             loss_values.push(loss);  // Ajouter la perte au vecteur loss_values
             println!("Itération: {}, Perte: {}", iteration, loss);
@@ -111,6 +124,92 @@ fn predict(weights: &[f64], bias: &[f64], input: &[f64], isclassification: bool)
 
     prediction
 }
+
+// Fonction pour sauvegarder le modèle dans un fichier JSON
+pub unsafe fn save_model(model: &LinearModel, num_features: usize, file_path: &str){
+
+    let weights_slice = std::slice::from_raw_parts(model.weights, num_features * 3);
+    let bias_slice = std::slice::from_raw_parts(model.bias, 3);
+
+
+    let serializable_model = SerializableLinearModel {
+        weights: weights_slice.to_vec(),
+        bias: bias_slice.to_vec(),
+        loss: unsafe { std::slice::from_raw_parts(model.loss, model.loss_size).to_vec() },
+        loss_size: model.loss_size,
+    };
+
+    let model_json = serde_json::to_string(&serializable_model).map_err(|err| {
+        eprintln!("Failed to serialize model: {}", err);
+        err
+    });
+    if let Ok(json) = model_json {
+        if let Err(err) = std::fs::write(file_path, json) {
+            eprintln!("Failed to write model to file: {}", err);
+        }
+    }
+
+    println!("Model saved successfully!");
+}
+
+// Fonction pour charger le modèle depuis un fichier JSON
+pub fn load_model(file_path: &str) -> Result<LinearModel, Box<dyn Error>> {
+    println!("Loading linear model");
+    let model_json = fs::read_to_string(file_path)?;
+    let serializable_model: SerializableLinearModel = serde_json::from_str(&model_json)?;
+
+    let weights = serializable_model.weights.into_boxed_slice().as_mut_ptr();
+    let bias = serializable_model.bias.into_boxed_slice().as_mut_ptr();
+    let loss = serializable_model.loss.into_boxed_slice().as_mut_ptr();
+
+    let model = LinearModel {
+        weights,
+        bias,
+        loss,
+        loss_size: serializable_model.loss_size,
+    };
+
+    std::mem::forget(weights);
+    std::mem::forget(bias);
+    std::mem::forget(loss);
+
+    println!("Model loaded successfully!");
+    Ok(model)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn save_model_ml(model: *const LinearModel, num_features: usize, file_path: *const c_char) -> bool {
+    let file_path = match CStr::from_ptr(file_path).to_str() {
+        Ok(s) => s,
+        Err(_) => {
+            eprintln!("Invalid file path string");
+            return false;
+        }
+    };
+
+    save_model(&*model, num_features, file_path);
+    true
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn load_model_ml(file_path: *const c_char) -> *mut LinearModel {
+    let file_path = match CStr::from_ptr(file_path).to_str() {
+        Ok(s) => s,
+        Err(_) => {
+            eprintln!("Invalid file path string");
+            return std::ptr::null_mut();
+        }
+    };
+
+    match load_model(file_path) {
+        Ok(model) => Box::into_raw(Box::new(model)),
+        Err(e) => {
+            eprintln!("Failed to load model: {}", e);
+            std::ptr::null_mut()
+        }
+    }
+}
+
 
 // Fonction de prédiction pour le modèle linéaire, accessible depuis l'extérieur du code Rust
 #[no_mangle]

@@ -1,7 +1,11 @@
 import numpy as np
 import ctypes
 import matplotlib.pyplot as plt
-
+from PIL import Image
+import random
+import os
+import sys
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
 # Définir la structure Point
 class Point(ctypes.Structure):
@@ -34,6 +38,70 @@ rbf_network_lib.rbf_network_predict.argtypes = [
 # Définir le prototype de la fonction rbf_network_save
 rbf_network_lib.rbf_network_save.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
 rbf_network_lib.rbf_network_save.restype = None
+
+
+def standardize_image(image):
+    min_val = np.min(image)
+    max_val = np.max(image)
+    if max_val - min_val == 0:
+        # Si toutes les valeurs sont les mêmes, retourne une image de zéros
+        n_image = np.zeros_like(image, dtype=np.float64)
+    else:
+        n_image = (image - min_val) / (max_val - min_val)
+    return n_image
+
+
+def read_image_as_1D(image_path):
+    image = Image.open(image_path)
+    if image.mode != 'RGB':
+        image = image.convert('RGB')
+    image_as_array = standardize_image(image)
+    image_1D = image_as_array.flatten()
+    return image_1D
+
+
+def test_image(inputs, outputs, sigma, iteration_count):
+    # Convertir les données en format compatible avec la librairie Rust
+    points_array = (Point * len(inputs))()
+    for i, (x, y) in enumerate(inputs):
+        points_array[i].x = x
+        points_array[i].y = y
+
+    outputs_array = np.array(outputs, dtype=np.float64)
+    outputs_c = outputs_array.ctypes.data_as(ctypes.POINTER(ctypes.c_double))
+
+    num_units = len(inputs)
+
+    # Créer une instance de RBFNetwork en utilisant la librairie Rust
+    rbf_network = rbf_network_lib.rbf_network_new(num_units, sigma, len(outputs[0]))
+
+    # Entraîner le réseau
+    rbf_network_lib.rbf_network_fit(
+        rbf_network,
+        points_array,
+        len(inputs),
+        outputs_c,
+        len(outputs),
+        iteration_count,
+        num_units,
+        len(outputs[0])
+    )
+
+    model_name = f"./save_model/model_mlp_{sigma}_{iteration_count}.json"
+    model_name_c = model_name.ctypes.data_as(ctypes.c_char_p)
+
+    rbf_network_lib.rbf_network_save(rbf_network, model_name_c)
+
+    # validate_model(mlp, k, inputs_test, npl, outputs_names, outputs_test)
+
+    # save_path = f"./save_model/model_mlp_{layers}_{iteration_count}_{alpha}.json".encode('utf-8')
+    # lib.save_mlp(mlp, save_path)
+    #
+    # lib.mlp_free(mlp)
+
+    # # Fermeture de la barre de progression
+    # tqdm_bar.close()
+
 
 
 def test(X_train, Y_train, sigma, num_units, num_iterations):
@@ -238,7 +306,7 @@ def cas_de_test():
     multi_cross()
 
 
-cas_de_test()
+# cas_de_test()
 '''
 #la regression :
 
@@ -281,3 +349,111 @@ outputs = np.array([
 ],dtype=np.float64)
 
 '''
+
+def collecter_images(dossier, prefixe, liste_images):
+    for fichier in os.listdir(dossier):
+        if prefixe in fichier.lower():
+            chemin_complet = os.path.join(dossier, fichier)
+            if os.path.isfile(chemin_complet):
+                liste_images.append(chemin_complet)
+
+
+def test_train_image(iteration_count, sigma, class1, class2, class3):
+    vache_dir = os.path.normpath(class1)
+    chevre_dir = os.path.normpath(class2)
+    mouton_dir = os.path.normpath(class3)
+
+    vache_images = []
+    chevre_images = []
+    mouton_images = []
+
+    # Collecte des images pour chaque catégorie
+    collecter_images(vache_dir, "vache", vache_images)
+    collecter_images(chevre_dir, "goat", chevre_images)
+    collecter_images(mouton_dir, "mouton", mouton_images)
+
+    # Mélanger les images
+    random.shuffle(vache_images)
+    random.shuffle(chevre_images)
+    random.shuffle(mouton_images)
+
+    print("image collected")
+
+    # ratio d'images dans le dataset de train et de validation
+    train_ratio = 0.8
+    # test_ratio = 0.2
+
+    vache_train_count = int(len(vache_images) * train_ratio)
+    chevre_train_count = int(len(chevre_images) * train_ratio)
+    mouton_train_count = int(len(mouton_images) * train_ratio)
+
+    # vache_test_count = len(vache_images) - vache_train_count
+    # chevre_test_count = len(chevre_images) - chevre_train_count
+    # mouton_test_count = len(mouton_images) - mouton_train_count
+
+    vache_train_images = vache_images[:vache_train_count]
+    vache_test_images = vache_images[vache_train_count:]
+
+    chevre_train_images = chevre_images[:chevre_train_count]
+    chevre_test_images = chevre_images[chevre_train_count:]
+
+    mouton_train_images = mouton_images[:mouton_train_count]
+    mouton_test_images = mouton_images[mouton_train_count:]
+
+    train_images = vache_train_images + chevre_train_images + mouton_train_images
+    test_images = vache_test_images + chevre_test_images + mouton_test_images
+
+    train_outputs = []
+    test_outputs = []
+
+    for image_path in train_images:
+        # determiner la classe de l'image à partir du path de l'image
+        if "vache" in image_path:
+            label = [1, -1, -1]
+        elif "chevre" in image_path:
+            label = [-1, 1, -1]
+        elif "mouton" in image_path:
+            label = [-1, -1, 1]
+
+        # creer le vecteur output
+        output_vector = [label]
+
+        # ajouter le vecteur output de l'image dans le vecteur output de dataset d'apprentissage
+        train_outputs.append(output_vector)
+
+    for image_path in test_images:
+        if "vache" in image_path:
+            label = [1, -1, -1]
+        elif "chevre" in image_path:
+            label = [-1, 1, -1]
+        elif "mouton" in image_path:
+            label = [-1, -1, 1]
+
+        output_vector = [label]
+
+        test_outputs.append(output_vector)
+
+    inputs_train = [read_image_as_1D(img_path) for img_path in train_images]
+    inputs_train = np.array(inputs_train)
+
+    inputs_test = [read_image_as_1D(img_path) for img_path in test_images]
+    inputs_test = np.array(inputs_test)
+
+    train_images = np.array(train_images)
+
+    train_outputs = np.array(train_outputs, dtype=np.float64)
+
+    test_outputs = np.array(test_outputs, dtype=np.float64)
+
+    test_image(inputs_train, train_outputs, sigma, iteration_count)
+
+
+iteration_count = 10000
+sigma = 0.1
+
+
+class1 = "../DataSet/vache"
+class2 = "../DataSet/chevre"
+class3 = "../DataSet/mouton"
+
+# test_train_image(iteration_count, sigma, class1, class2, class3)

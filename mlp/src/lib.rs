@@ -2,7 +2,7 @@ use rand::Rng;
 use serde::{Serialize, Deserialize};
 use serde_json;
 use std::os::raw::c_char;
-use std::ffi::CStr;
+use std::ffi::{c_void, CStr};
 
 // Définition de la structure du modèle MLP
 #[derive(Serialize, Deserialize)]
@@ -110,9 +110,10 @@ impl MLP {
         is_classification: bool,
         iteration_count: usize,
         alpha: f64,
+        callback: Option<ProgressCallback>,
+        user_data: *mut c_void,
     ) {
         for _it in 0..iteration_count {
-            println!("{}", all_samples_inputs.len());
             let k = rand::thread_rng().gen_range(0..all_samples_inputs.len());
             let inputs_k = &all_samples_inputs[k];
             let y_k = &all_samples_expected_outputs[k];
@@ -145,8 +146,13 @@ impl MLP {
                 }
             }
 
-            println!("calcul loss");
-            if _it % 50000 == 0 || _it == (iteration_count - 1) {
+            // Appeler le callback si fourni
+            if let Some(cb) = callback {
+                let progress = _it as f64 / iteration_count as f64 * 100.0;
+                cb(progress, user_data);
+            }
+
+            if _it % 200 == 0 || _it == (iteration_count - 1) {
                 let mut total_loss = 0.0;
                 for (inputs, expected_outputs) in all_samples_inputs.iter().zip(all_samples_expected_outputs.iter()) {
                     self.propagate(inputs, is_classification);
@@ -156,9 +162,11 @@ impl MLP {
                 }
                 let average_loss = total_loss / all_samples_inputs.len() as f64;
                 self.loss.push(average_loss);
-                println!("Iteration: {}, Average Loss: {}", _it, average_loss);
+                println!("\n Iteration: {}, Average Loss: {}", _it, average_loss);
             }
+
         }
+
     }
 
     // Méthode pour enregistrer le modèle dans un fichier au format JSON
@@ -178,6 +186,7 @@ impl MLP {
 
     // Méthode statique pour charger le modèle depuis un fichier JSON
     pub fn load_model(file_path: &str) -> Result<MLP, Box<dyn std::error::Error>> {
+        println!("load mlp");
         let model_json = std::fs::read_to_string(file_path)?;
         let mlp = serde_json::from_str(&model_json)?;
         Ok(mlp)
@@ -234,6 +243,8 @@ pub extern "C" fn mlp_free(ptr: *mut f64) {
     }
 }
 
+pub type ProgressCallback = extern "C" fn(progress: f64, user_data: *mut c_void);
+
 #[no_mangle]
 pub extern "C" fn train_mlp(
     mlp: &mut MLP,
@@ -244,6 +255,8 @@ pub extern "C" fn train_mlp(
     is_classification: bool,
     iteration_count: usize,
     alpha: f64,
+    callback: Option<ProgressCallback>,
+    user_data: *mut c_void,
 ) {
     let inputs_slice = unsafe { std::slice::from_raw_parts(all_samples_inputs, all_samples_inputs_row_len * mlp.d[0]) };
     let outputs_slice = unsafe { std::slice::from_raw_parts(all_samples_outputs, all_samples_outputs_len * mlp.d[mlp.d.len() - 1]) };
@@ -270,7 +283,7 @@ pub extern "C" fn train_mlp(
         }
     }
 
-    mlp.train(&inputs, &outputs, is_classification, iteration_count, alpha);
+    mlp.train(&inputs, &outputs, is_classification, iteration_count, alpha, callback, user_data);
     //println!("save model");
     //mlp.save_model("./mlp_model.json");
 }

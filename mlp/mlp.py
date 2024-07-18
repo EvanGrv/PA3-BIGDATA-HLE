@@ -1,16 +1,36 @@
 import ctypes
 import os
+import sys
 
 import numpy as np
 import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import json
 
 from PIL import Image
 import random
+from tqdm import tqdm
 
 from mpl_toolkits.mplot3d import Axes3D
 
 lib = ctypes.CDLL("../mlp/target/release/mlp.dll")
+
+# Définir le type de fonction callback
+ProgressCallbackType = ctypes.CFUNCTYPE(None, ctypes.c_double, ctypes.c_void_p)
+
+# Initialisation de tqdm pour la barre de progression
+tqdm_bar = tqdm(total=100, desc="Training Progress", unit="%", position=0, mininterval=0.1)
+
+
+# Fonction callback
+def progress_callback(progress, user_data):
+    tqdm_bar.update(progress - tqdm_bar.n)  # Mise à jour de l'avancement
+    tqdm_bar.set_description(f"Training Progress: {progress:.2f}%")  # Mise à jour du libellé
+    sys.stdout.flush()
+
+
+# Convertir la fonction callback en un type compatible C
+progress_callback_c = ProgressCallbackType(progress_callback)
 
 # Définir la structure MLP en Python
 lib.mlp_predict.restype = ctypes.POINTER(ctypes.c_double)
@@ -25,6 +45,8 @@ lib.train_mlp.argtypes = [
     ctypes.c_bool,
     ctypes.c_size_t,
     ctypes.c_double,
+    ProgressCallbackType,
+    ctypes.c_void_p
 ]
 
 lib.load_mlp.restype = ctypes.c_void_p
@@ -59,8 +81,32 @@ def load_images_from_directory(directory):
 
 
 def standardize_image(image):
-    n_image = (image - np.min(image)) / (np.max(image) - np.min(image))
+    min_val = np.min(image)
+    max_val = np.max(image)
+    if max_val - min_val == 0:
+        # Si toutes les valeurs sont les mêmes, retourne une image de zéros
+        n_image = np.zeros_like(image, dtype=np.float64)
+    else:
+        n_image = (image - min_val) / (max_val - min_val)
     return n_image
+
+
+def get_flattened_image_size(image_path):
+    # Charger l'image
+    image = Image.open(image_path)
+
+    # Convertir en RGB si nécessaire (pour s'assurer qu'il y a 3 canaux)
+    if image.mode != 'RGB':
+        image = image.convert('RGB')
+
+    # Obtenir les dimensions de l'image
+    width, height = image.size
+    num_channels = len(image.getbands())  # Normalement 3 pour RGB
+
+    # Calculer la taille de l'image aplatie
+    flattened_size = width * height * num_channels
+
+    return flattened_size
 
 
 def read_image_as_1D(image_path):
@@ -70,6 +116,66 @@ def read_image_as_1D(image_path):
     image_as_array = standardize_image(image)
     image_1D = image_as_array.flatten()
     return image_1D
+
+
+def validate_model(mlp, k, inputs_test, npl, outputs_names, outputs_test):
+    # Prédiction avec le MLP entraîné
+    if (k <= 2):
+        predicted_outputs = []
+        for i in range(len(inputs_test)):
+            input_ptr = inputs_test[i].ctypes.data_as(ctypes.POINTER(ctypes.c_double))
+            output_ptr = lib.mlp_predict(mlp, input_ptr, len(inputs_test[i]), ctypes.c_bool(True))
+            predicted_output = np.array([output_ptr[j] for j in range(npl[-1])])
+            lib.mlp_free(output_ptr)
+            predicted_outputs.append(-1 if predicted_output < 0 else 1)
+
+            print("Image:", outputs_names[i], "Predicted output:", predicted_output, "resulat", outputs_test[i])
+
+    else:
+        predicted_outputs = []
+        correct_outputs = []
+        true_outputs = []
+
+        print("len inputs_test:", len(inputs_test))
+
+        for i in range(len(inputs_test)):
+            print(i)
+            input_ptr = inputs_test[i].ctypes.data_as(ctypes.POINTER(ctypes.c_double))
+            output_ptr = lib.mlp_predict(mlp, input_ptr, len(inputs_test[i]), ctypes.c_bool(True))
+            predicted_output = np.array([-1 if output_ptr[j] < 0 else 1 for j in range(npl[-1])])
+            to_show = np.array([output_ptr[j] for j in range(npl[-1])])
+            # comparison entre predicted_output et outputs_test[i]
+            # si on ets bon correct_output.append(1) sinon on fait rien
+            predicted_output = predicted_output.astype(np.float64)
+
+            true_class = np.argmax(outputs_test[i][0])
+
+            true_outputs.append(true_class)
+
+            if np.array_equal(predicted_output, outputs_test[i][0]):
+                correct_outputs.append(outputs_names[i])
+
+            lib.mlp_free(output_ptr)
+            predicted_outputs.append(np.argmax(predicted_output))
+            print("Image:", outputs_names[i], "Predicted output:", to_show, "resulat", outputs_test[i])
+
+        accuracy = len(correct_outputs) / len(outputs_test)
+        print("Accuracy: ", accuracy)
+
+        # Calculer et afficher la matrice de confusion
+        class_names = ['vache', 'chevre', 'mouton']  # Assurez-vous que cet ordre correspond à vos classes
+        cm = confusion_matrix(true_outputs, predicted_outputs)
+        disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=class_names)
+        fig, ax = plt.subplots(figsize=(10, 10))
+        disp.plot(ax=ax, cmap='Blues')
+        plt.title(f"Matrice de confusion (Accuracy: {accuracy:.2f})")
+
+        # Enregistrer la figure sous forme de fichier JPEG
+        save_path = f'./confusion_matrix/confusion_{accuracy}_{npl}.jpeg'
+        plt.savefig(save_path, format='jpeg')
+
+        plt.show()
+
 
 def test(inputs, outputs, n, title, k, iteration_count, alpha, isclassification):
     # Définition des paramètres
@@ -84,7 +190,8 @@ def test(inputs, outputs, n, title, k, iteration_count, alpha, isclassification)
     # Entraînement du MLP
     lib.train_mlp(mlp, inputs.ctypes.data_as(ctypes.POINTER(ctypes.c_double)), len(inputs),
                   outputs.ctypes.data_as(ctypes.POINTER(ctypes.c_double)), len(outputs),
-                  ctypes.c_bool(isclassification), iteration_count, alpha)
+                  ctypes.c_bool(isclassification), iteration_count, alpha, progress_callback_c,
+                  None)
 
     predicted_outputs1 = []
     for i in range(len(inputs)):
@@ -292,50 +399,24 @@ def test_image(inputs, outputs, layers, title, k, iteration_count, alpha, images
 
     # Création du MLP
     mlp = lib.create_mlp(npl_array, len(npl))
+    # mlp = lib.load_mlp("./save_model/model_mlp_[4800, 256, 128, 3]_1000_0.001.json".encode('utf-8'))
 
     #Entraînement du MLP
     lib.train_mlp(mlp, inputs.ctypes.data_as(ctypes.POINTER(ctypes.c_double)), len(inputs),
                   outputs.ctypes.data_as(ctypes.POINTER(ctypes.c_double)), len(outputs),
-                  ctypes.c_bool(True), iteration_count, alpha)
+                  ctypes.c_bool(True), iteration_count, alpha, progress_callback_c,
+                  None)
 
-    # Prédiction avec le MLP entraîné
-    if (k <= 2):
-        predicted_outputs = []
-        for i in range(len(inputs_test)):
-            input_ptr = inputs_test[i].ctypes.data_as(ctypes.POINTER(ctypes.c_double))
-            output_ptr = lib.mlp_predict(mlp, input_ptr, len(inputs_test[i]), ctypes.c_bool(True))
-            predicted_output = np.array([output_ptr[j] for j in range(npl[-1])])
-            lib.mlp_free(output_ptr)
-            predicted_outputs.append(-1 if predicted_output < 0 else 1)
+    validate_model(mlp, k, inputs_test, npl, outputs_names, outputs_test)
 
-            print("Image:", outputs_names[i], "Predicted output:", predicted_output, "resulat", outputs_test[i])
-
-    else:
-        predicted_outputs = []
-        correct_outputs = []
-        for i in range(len(inputs_test)):
-            input_ptr = inputs_test[i].ctypes.data_as(ctypes.POINTER(ctypes.c_double))
-            output_ptr = lib.mlp_predict(mlp, input_ptr, len(inputs_test[i]), ctypes.c_bool(True))
-            predicted_output = np.array([-1 if output_ptr[j] < 0 else 1 for j in range(npl[-1])])
-            to_show = np.array([output_ptr[j] for j in range(npl[-1])])
-            # comparison entre predicted_output et outputs_test[i]
-            # si on ets bon correct_output.append(1) sinon on fait rien
-            predicted_output = predicted_output.astype(np.float64)
-
-            if np.array_equal(predicted_output, outputs_test[i][0]):
-                correct_outputs.append(outputs_names[i])
-
-            lib.mlp_free(output_ptr)
-            predicted_outputs.append(np.argmax(predicted_output))
-            print("Image:", outputs_names[i], "Predicted output:", to_show, "resulat", outputs_test[i])
-
-        accuracy = len(correct_outputs) / len(outputs_test)
-        print("Accuracy: ", accuracy)
-
+    print("save")
     save_path = f"./save_model/model_mlp_{layers}_{iteration_count}_{alpha}.json".encode('utf-8')
     lib.save_mlp(mlp, save_path)
 
     lib.mlp_free(mlp)
+
+    # Fermeture de la barre de progression
+    tqdm_bar.close()
 
 
 def linear_simple():
@@ -628,41 +709,28 @@ def collecter_images(dossier, prefixe, liste_images):
                 liste_images.append(chemin_complet)
 
 
-def test_train_image():
-    # Exemple d'utilisation
-    # n = [1600, 512, 256, 3]
-    n = [2600, 100, 100, 3]
-    iteration_count = 1000
-    alpha = 0.001
-
-    vache_dir = os.path.normpath("../DataSet/vache")
-    chevre_dir = os.path.normpath("../DataSet/chevre")
-    mouton_dir = os.path.normpath("../DataSet/mouton")
+def test_train_image(n, iteration_count, alpha, class1, class2, class3):
+    vache_dir = os.path.normpath(class1)
+    chevre_dir = os.path.normpath(class2)
+    mouton_dir = os.path.normpath(class3)
 
     vache_images = []
     chevre_images = []
     mouton_images = []
 
-    # for i in range(0, 500):
-    #     if os.path.isfile(os.path.join(vache_dir, f"vache-{i}.jpg")):
-    #         vache_images.append(os.path.join(vache_dir, f"vache-{i}.jpg"))
-    #     if os.path.isfile(os.path.join(chevre_dir, f"chevre-{i}.jpg")):
-    #         chevre_images.append(os.path.join(chevre_dir, f"chevre-{i}.jpg"))
-    #     if os.path.isfile(os.path.join(mouton_dir, f"mouton-{i}.jpg")):
-    #         mouton_images.append(os.path.join(mouton_dir, f"mouton-{i}.jpg"))
-
     # Collecte des images pour chaque catégorie
     collecter_images(vache_dir, "vache", vache_images)
-    collecter_images(chevre_dir, "chevre", vache_images)
-    collecter_images(mouton_dir, "mouton", vache_images)
-
-    print(vache_images)
+    collecter_images(chevre_dir, "goat", chevre_images)
+    collecter_images(mouton_dir, "mouton", mouton_images)
 
     # Mélanger les images
     random.shuffle(vache_images)
     random.shuffle(chevre_images)
     random.shuffle(mouton_images)
 
+    print("image collected")
+
+    # ratio d'images dans le dataset de train et de validation
     train_ratio = 0.8
     # test_ratio = 0.2
 
@@ -670,9 +738,9 @@ def test_train_image():
     chevre_train_count = int(len(chevre_images) * train_ratio)
     mouton_train_count = int(len(mouton_images) * train_ratio)
 
-    vache_test_count = len(vache_images) - vache_train_count
-    chevre_test_count = len(chevre_images) - chevre_train_count
-    mouton_test_count = len(mouton_images) - mouton_train_count
+    # vache_test_count = len(vache_images) - vache_train_count
+    # chevre_test_count = len(chevre_images) - chevre_train_count
+    # mouton_test_count = len(mouton_images) - mouton_train_count
 
     vache_train_images = vache_images[:vache_train_count]
     vache_test_images = vache_images[vache_train_count:]
@@ -726,16 +794,19 @@ def test_train_image():
 
     train_outputs = np.array(train_outputs, dtype=np.float64)
 
-    test_images = np.array(train_images)
     test_outputs = np.array(test_outputs, dtype=np.float64)
-
-    print(inputs_train)
-    print(train_outputs)
 
     test_image(inputs_train, train_outputs, n, "Training Results", 3, iteration_count, alpha,
                train_images, inputs_test, test_outputs, test_images)
 
 
+# n = [4800, 512, 256, 3]
+n = [4800, 200, 100, 3]
+iteration_count = 10000
+alpha = 0.0009
 
+class1 = "../DataSet/vache"
+class2 = "../DataSet/chevre"
+class3 = "../DataSet/mouton"
 
-test_train_image()
+# test_train_image(n, iteration_count, alpha, class1, class2, class3)
