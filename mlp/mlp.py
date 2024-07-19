@@ -171,7 +171,7 @@ def validate_model(mlp, k, inputs_test, npl, outputs_names, outputs_test):
         plt.title(f"Matrice de confusion (Accuracy: {accuracy:.2f})")
 
         # Enregistrer la figure sous forme de fichier JPEG
-        save_path = f'./confusion_matrix/confusion_{accuracy}_{npl}.jpeg'
+        save_path = f'./confusion_matrix/confusion_mlp_{accuracy}_{npl}.jpeg'
         plt.savefig(save_path, format='jpeg')
 
         plt.show()
@@ -660,45 +660,28 @@ def cas_de_test_régression():
 #cas_de_test()
 #cas_de_test_régression()
 
-def test_predict_model(mlp, layers, k, inputs_test, outputs_test, outputs_names):
-    # Définition des paramètres
-    npl = np.array(layers)
+def predict_image_class(mlp, image_path, npl, class_names):
+    # Charger et standardiser l'image
+    image_1D = read_image_as_1D(image_path)
 
-    # Prédiction avec le MLP entraîné
-    if (k <= 2):
-        predicted_outputs = []
-        for i in range(len(inputs_test)):
-            input_ptr = inputs_test[i].ctypes.data_as(ctypes.POINTER(ctypes.c_double))
-            output_ptr = lib.mlp_predict(mlp, input_ptr, len(inputs_test[i]), ctypes.c_bool(True))
-            predicted_output = np.array([output_ptr[j] for j in range(npl[-1])])
-            lib.mlp_free(output_ptr)
-            predicted_outputs.append(-1 if predicted_output < 0 else 1)
+    # Convertir l'image en pointeur C
+    input_ptr = image_1D.ctypes.data_as(ctypes.POINTER(ctypes.c_double))
 
-            print("Image:", outputs_names[i], "Predicted output:", predicted_output, "resulat", outputs_test[i])
+    # Appeler la fonction de prédiction du modèle MLP
+    output_ptr = lib.mlp_predict(mlp, input_ptr, len(image_1D), ctypes.c_bool(True))
 
-    else:
-        predicted_outputs = []
-        correct_outputs = []
-        for i in range(len(inputs_test)):
-            input_ptr = inputs_test[i].ctypes.data_as(ctypes.POINTER(ctypes.c_double))
-            output_ptr = lib.mlp_predict(mlp, input_ptr, len(inputs_test[i]), ctypes.c_bool(True))
-            predicted_output = np.array([-1 if output_ptr[j] < 0 else 1 for j in range(npl[-1])])
-            to_show = np.array([output_ptr[j] for j in range(npl[-1])])
-            # comparison entre predicted_output et outputs_test[i]
-            # si on ets bon correct_output.append(1) sinon on fait rien
-            predicted_output = predicted_output.astype(np.float64)
+    # Convertir la sortie en tableau NumPy
+    predicted_output = np.array([output_ptr[j] for j in range(npl[-1])])
+    predicted_output = predicted_output.astype(np.float64)
 
-            if np.array_equal(predicted_output, outputs_test[i][0]):
-                correct_outputs.append(outputs_names[i])
+    # Libérer la mémoire allouée pour la sortie du modèle
+    lib.mlp_free(output_ptr)
 
-            lib.mlp_free(output_ptr)
-            predicted_outputs.append(np.argmax(predicted_output))
-            print("Image:", outputs_names[i], "Predicted output:", to_show, "resulat", outputs_test[i])
+    # Trouver la classe prédite
+    predicted_class_index = np.argmax(predicted_output)
+    predicted_class = class_names[predicted_class_index]
 
-        accuracy = len(correct_outputs) / len(outputs_test)
-        print("Accuracy: ", accuracy)
-
-    lib.mlp_free(mlp)
+    return predicted_class, predicted_output
 
 
 def collecter_images(dossier, prefixe, liste_images):

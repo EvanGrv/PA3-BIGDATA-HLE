@@ -115,7 +115,7 @@ def validate_linear_model(linear_model, inputs_test, outputs_test, outputs_names
     plt.title(f"Matrice de confusion (Accuracy: {accuracy:.2f})")
 
     # Enregistrer la figure sous forme de fichier JPEG
-    save_path = f'./confusion_matrix/confusion_linear_{accuracy:.2f}.jpeg'
+    save_path = f'./confusion_matrix/confusion_linear_{accuracy}_{alpha}_{iteration_count}.jpeg'
     plt.savefig(save_path, format='jpeg')
 
     plt.show()

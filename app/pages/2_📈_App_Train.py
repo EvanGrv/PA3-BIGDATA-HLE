@@ -55,7 +55,9 @@ def verification(model, train, class1, class2, class3, iteration_count, alpha, n
         match model:
             case "Linear Model":
                 if train == "True":
-                    st.write("True")
+                    # linear_model.test_train_image(iteration_count, alpha, class1, class2, class3)
+                    command = f'python -c "import sys; sys.path.append(r\'C:\\Users\\lucho\\Documents\\cours\\projet_annuel\\linear_model\'); import linear_model; linear_model.test_train_image({iteration_count}, {alpha}, \'{class1}\', \'{class2}\', \'{class3}\')"'
+                    run_training_command(command)
                 elif train == "False":
                     st.write("False")
                 else:
@@ -135,12 +137,14 @@ elif train == "True":
     data_path3 = st.text_input("Entrez le chemin vers le DataSet", value=default_data_path3)
 
     # Champs de texte pour saisir les paramètres du modèle
-    n_input = st.text_input("Entrez la liste des paramètres n (par ex. [4800, 512, 256, 3])", "[4800, 512, 256, 3]")
+    n = None
+    if model == "MLP":
+        n_input = st.text_input("Entrez la liste des paramètres n (par ex. [4800, 512, 256, 3])", "[4800, 512, 256, 3]")
+        # Convertir les entrées utilisateur en types appropriés
+        n = parse_int_list(n_input)
     iteration_count_input = st.text_input("Entrez le nombre d'itérations", "1000")
     alpha_input = st.text_input("Entrez la valeur de alpha", "0.001")
 
-    # Convertir les entrées utilisateur en types appropriés
-    n = parse_int_list(n_input)
     try:
         iteration_count = int(iteration_count_input)
     except ValueError:
@@ -155,7 +159,7 @@ elif train == "True":
 
     # Bouton pour lancer la vérification
     if st.button("Start", key="verif", type="secondary"):
-        if n and iteration_count is not None and alpha is not None:
+        if iteration_count is not None and alpha is not None:
             verification(model, train, data_path1, data_path2, data_path3, iteration_count, alpha, n)
         else:
             st.error("Veuillez entrer des valeurs valides pour tous les paramètres.")
@@ -172,4 +176,4 @@ if os.path.exists(LOG_FILE):
 # Bouton pour nettoyer les logs
 if st.button("Clean Logs"):
     clean_logs()
-    st.experimental_rerun()
+    st.rerun()
