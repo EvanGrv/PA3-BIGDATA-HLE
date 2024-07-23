@@ -130,9 +130,9 @@ def augment_images(input_folder, target_total=8000):
 
 
 # Utilisation de la fonction
-vache_dir = "./DataSet/vache"
-chevre_dir = "./DataSet/chevre"
-mouton_dir = "./DataSet/mouton"
+vache_dir = "../DataSet/vache"
+chevre_dir = "../DataSet/chevre"
+mouton_dir = "../DataSet/mouton"
 augment_images(chevre_dir)
 
 # supprimer_images_augmentees(mouton_dir)

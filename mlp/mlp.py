@@ -784,12 +784,12 @@ def test_train_image(n, iteration_count, alpha, class1, class2, class3):
 
 
 # n = [4800, 512, 256, 3]
-n = [4800, 200, 100, 3]
-iteration_count = 10000
-alpha = 0.0009
+n = [4800, 102, 102, 3]
+iteration_count = 20000
+alpha = 0.0001
 
 class1 = "../DataSet/vache"
 class2 = "../DataSet/chevre"
 class3 = "../DataSet/mouton"
 
-# test_train_image(n, iteration_count, alpha, class1, class2, class3)
+test_train_image(n, iteration_count, alpha, class1, class2, class3)
