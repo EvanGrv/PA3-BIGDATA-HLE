@@ -2,25 +2,27 @@ import ctypes
 import os
 import sys
 
+import json
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
-import json
-
-from PIL import Image
 import random
+
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+from PIL import Image
 from tqdm import tqdm
 
 from mpl_toolkits.mplot3d import Axes3D
 
+
 lib = ctypes.CDLL("../mlp/target/release/mlp.dll")
 
+
+# Barre de chargement
 # Définir le type de fonction callback
 ProgressCallbackType = ctypes.CFUNCTYPE(None, ctypes.c_double, ctypes.c_void_p)
 
-# Initialisation de tqdm pour la barre de progression
+# Initialisation de tqdm pour la barre de progression lors de l'entrainement des modèles
 tqdm_bar = tqdm(total=100, desc="Training Progress", unit="%", position=0, mininterval=0.1)
-
 
 # Fonction callback
 def progress_callback(progress, user_data):
@@ -28,14 +30,17 @@ def progress_callback(progress, user_data):
     tqdm_bar.set_description(f"Training Progress: {progress:.2f}%")  # Mise à jour du libellé
     sys.stdout.flush()
 
-
 # Convertir la fonction callback en un type compatible C
 progress_callback_c = ProgressCallbackType(progress_callback)
 
-# Définir la structure MLP en Python
+
+
+
+# Définition de la structure MLP en Python
 lib.mlp_predict.restype = ctypes.POINTER(ctypes.c_double)
 lib.mlp_predict.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_double), ctypes.c_uint, ctypes.c_bool]
 lib.mlp_free.argtypes = [ctypes.c_void_p]
+
 lib.train_mlp.argtypes = [
     ctypes.c_void_p,
     ctypes.POINTER(ctypes.c_double),
@@ -58,6 +63,7 @@ lib.save_mlp.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
 # Définition de la signature de la fonction create_mlp
 lib.create_mlp.argtypes = (ctypes.POINTER(ctypes.c_uint), ctypes.c_size_t)
 lib.create_mlp.restype = ctypes.c_void_p
+
 
 
 def lire_fichier_json(nom_fichier):

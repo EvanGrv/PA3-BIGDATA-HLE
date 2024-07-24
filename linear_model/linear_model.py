@@ -512,7 +512,7 @@ def linear_simple_3D():
 
     num_samples, num_features = inputs.shape
     learning_rate = 0.001
-    num_iterations = 100000
+    num_iterations = 10000000
     k = 1
 
     return test(inputs, outputs, num_samples, num_features, learning_rate, num_iterations, k, False)
@@ -533,7 +533,7 @@ def linear_tricky_3D():
 
     num_samples, num_features = inputs.shape
     learning_rate = 0.001
-    num_iterations = 100000
+    num_iterations = 10000
     k = 1
 
     return test(inputs, outputs, num_samples, num_features, learning_rate, num_iterations, k, False)
@@ -672,11 +672,11 @@ def test_train_image(iteration_count, alpha, class1, class2, class3):
     test_image(inputs_train, train_outputs, 3, iteration_count, alpha, inputs_test, test_outputs, test_images)
 
 
-iteration_count = 1000
+iteration_count = 1000000
 alpha = 0.001
 
 class1 = "../DataSet/vache"
 class2 = "../DataSet/chevre"
 class3 = "../DataSet/mouton"
 
-# test_train_image(iteration_count, alpha, class1, class2, class3)
+test_train_image(iteration_count, alpha, class1, class2, class3)
