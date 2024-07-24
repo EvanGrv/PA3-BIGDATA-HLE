@@ -124,63 +124,96 @@ def read_image_as_1D(image_path):
     return image_1D
 
 
-def validate_model(mlp, k, inputs_test, npl, outputs_names, outputs_test):
-    # Prédiction avec le MLP entraîné
-    if (k <= 2):
-        predicted_outputs = []
-        for i in range(len(inputs_test)):
-            input_ptr = inputs_test[i].ctypes.data_as(ctypes.POINTER(ctypes.c_double))
-            output_ptr = lib.mlp_predict(mlp, input_ptr, len(inputs_test[i]), ctypes.c_bool(True))
-            predicted_output = np.array([output_ptr[j] for j in range(npl[-1])])
-            lib.mlp_free(output_ptr)
-            predicted_outputs.append(-1 if predicted_output < 0 else 1)
+# def validate_model(mlp, k, inputs_test, npl, outputs_names, outputs_test):
+#     # Prédiction avec le MLP entraîné
+#     if (k <= 2):
+#         predicted_outputs = []
+#         for i in range(len(inputs_test)):
+#             input_ptr = inputs_test[i].ctypes.data_as(ctypes.POINTER(ctypes.c_double))
+#             output_ptr = lib.mlp_predict(mlp, input_ptr, len(inputs_test[i]), ctypes.c_bool(True))
+#             predicted_output = np.array([output_ptr[j] for j in range(npl[-1])])
+#             lib.mlp_free(output_ptr)
+#             predicted_outputs.append(-1 if predicted_output < 0 else 1)
+#
+#             print("Image:", outputs_names[i], "Predicted output:", predicted_output, "resulat", outputs_test[i])
+#
+#     else:
+#         predicted_outputs = []
+#         correct_outputs = []
+#         true_outputs = []
+#
+#         print("len inputs_test:", len(inputs_test))
+#
+#         for i in range(len(inputs_test)):
+#             print(i)
+#             input_ptr = inputs_test[i].ctypes.data_as(ctypes.POINTER(ctypes.c_double))
+#             output_ptr = lib.mlp_predict(mlp, input_ptr, len(inputs_test[i]), ctypes.c_bool(True))
+#             predicted_output = np.array([-1 if output_ptr[j] < 0 else 1 for j in range(npl[-1])])
+#             to_show = np.array([output_ptr[j] for j in range(npl[-1])])
+#             # comparison entre predicted_output et outputs_test[i]
+#             # si on ets bon correct_output.append(1) sinon on fait rien
+#             predicted_output = predicted_output.astype(np.float64)
+#
+#             true_class = np.argmax(outputs_test[i][0])
+#
+#             true_outputs.append(true_class)
+#
+#             if np.array_equal(predicted_output, outputs_test[i][0]):
+#                 correct_outputs.append(outputs_names[i])
+#
+#             lib.mlp_free(output_ptr)
+#             predicted_outputs.append(np.argmax(predicted_output))
+#             print("Image:", outputs_names[i], "Predicted output:", to_show, "resulat", outputs_test[i])
+#
+#         accuracy = len(correct_outputs) / len(outputs_test)
+#         print("Accuracy: ", accuracy)
+#
+#         # Calculer et afficher la matrice de confusion
+#         class_names = ['vache', 'chevre', 'mouton']  # Assurez-vous que cet ordre correspond à vos classes
+#         cm = confusion_matrix(true_outputs, predicted_outputs)
+#         disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=class_names)
+#         fig, ax = plt.subplots(figsize=(10, 10))
+#         disp.plot(ax=ax, cmap='Blues')
+#         plt.title(f"Matrice de confusion (Accuracy: {accuracy:.2f})")
+#
+#         # Enregistrer la figure sous forme de fichier JPEG
+#         save_path = f'./confusion_matrix/confusion_mlp_{accuracy}_{npl}.jpeg'
+#         plt.savefig(save_path, format='jpeg')
+#
+#         plt.show()
 
-            print("Image:", outputs_names[i], "Predicted output:", predicted_output, "resulat", outputs_test[i])
+def validate_model(mlp, inputs_test, outputs_test, npl):
+    predicted_outputs = []
+    true_classes = []
 
-    else:
-        predicted_outputs = []
-        correct_outputs = []
-        true_outputs = []
+    for i in range(len(inputs_test)):
+        input_ptr = inputs_test[i].ctypes.data_as(ctypes.POINTER(ctypes.c_double))
+        output_ptr = lib.mlp_predict(mlp, input_ptr, len(inputs_test[i]), ctypes.c_bool(True))
+        predicted_output = np.array([output_ptr[j] for j in range(npl[-1])])
+        lib.mlp_free(output_ptr)
 
-        print("len inputs_test:", len(inputs_test))
+        predicted_class = np.argmax(predicted_output)
+        true_class = np.argmax(outputs_test[i])
 
-        for i in range(len(inputs_test)):
-            print(i)
-            input_ptr = inputs_test[i].ctypes.data_as(ctypes.POINTER(ctypes.c_double))
-            output_ptr = lib.mlp_predict(mlp, input_ptr, len(inputs_test[i]), ctypes.c_bool(True))
-            predicted_output = np.array([-1 if output_ptr[j] < 0 else 1 for j in range(npl[-1])])
-            to_show = np.array([output_ptr[j] for j in range(npl[-1])])
-            # comparison entre predicted_output et outputs_test[i]
-            # si on ets bon correct_output.append(1) sinon on fait rien
-            predicted_output = predicted_output.astype(np.float64)
+        predicted_outputs.append(predicted_class)
+        true_classes.append(true_class)
 
-            true_class = np.argmax(outputs_test[i][0])
+    accuracy = np.mean(np.array(predicted_outputs) == np.array(true_classes))
+    print("Accuracy: ", accuracy)
 
-            true_outputs.append(true_class)
+    # Calculer et afficher la matrice de confusion
+    class_names = ['vache', 'chevre', 'mouton']  # Assurez-vous que cet ordre correspond à vos classes
+    cm = confusion_matrix(true_classes, predicted_outputs)
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=class_names)
+    fig, ax = plt.subplots(figsize=(10, 10))
+    disp.plot(ax=ax, cmap='Blues')
+    plt.title(f"Matrice de confusion (Accuracy: {accuracy:.2f})")
 
-            if np.array_equal(predicted_output, outputs_test[i][0]):
-                correct_outputs.append(outputs_names[i])
+    # Enregistrer la figure sous forme de fichier JPEG
+    save_path = f'./confusion_matrix/confusion_mlp_{accuracy:.2f}_{npl}.jpeg'
+    plt.savefig(save_path, format='jpeg')
 
-            lib.mlp_free(output_ptr)
-            predicted_outputs.append(np.argmax(predicted_output))
-            print("Image:", outputs_names[i], "Predicted output:", to_show, "resulat", outputs_test[i])
-
-        accuracy = len(correct_outputs) / len(outputs_test)
-        print("Accuracy: ", accuracy)
-
-        # Calculer et afficher la matrice de confusion
-        class_names = ['vache', 'chevre', 'mouton']  # Assurez-vous que cet ordre correspond à vos classes
-        cm = confusion_matrix(true_outputs, predicted_outputs)
-        disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=class_names)
-        fig, ax = plt.subplots(figsize=(10, 10))
-        disp.plot(ax=ax, cmap='Blues')
-        plt.title(f"Matrice de confusion (Accuracy: {accuracy:.2f})")
-
-        # Enregistrer la figure sous forme de fichier JPEG
-        save_path = f'./confusion_matrix/confusion_mlp_{accuracy}_{npl}.jpeg'
-        plt.savefig(save_path, format='jpeg')
-
-        plt.show()
+    plt.show()
 
 
 def test(inputs, outputs, n, title, k, iteration_count, alpha, isclassification):
@@ -314,82 +347,60 @@ def test(inputs, outputs, n, title, k, iteration_count, alpha, isclassification)
 
     else:
 
-        '''predicted_outputs = []
-
-        fichier_json = "./mlp_model.json"
-
-        # Convertir les listes en tableaux numpy avec dtype=object
-
-        mlp_from_file = lib.load_mlp(fichier_json.encode('utf-8'))'''
-
-        ''' for i in range(len(grid_points)):
-            input_ptr = grid_points[i].ctypes.data_as(ctypes.POINTER(ctypes.c_double))
-            output_ptr = lib.mlp_predict(mlp, input_ptr, len(grid_points[i]),
-                                         ctypes.c_bool(isclassification))
-            predicted_output = np.array([output_ptr[j] for j in range(npl[-1])])
-            lib.mlp_free(output_ptr)
-            grid_predictions[i] = np.ctypeslib.as_array(predicted_output, shape=(k,))
-
-            print("Input:", inputs[i], "Predicted output:", predicted_output, "resulat", outputs[i])
-
-        fig = plt.figure()
-        ax = Axes3D(fig)
-        ax.scatter(inputs[:, 0], inputs[:, 1], predicted_output)
-        plt.show()
-        plt.clf()'''
-
         if num_feature == 1:
-            # Régression linéaire avec pseudo-inverse de Moore Penrose pour une caractéristique
-            ones = np.ones((inputs.shape[0], 1))
-            X = np.hstack([ones, inputs])  # Ajout du biais
-            Y = outputs
+            x_min, x_max = inputs.min() - 0.5, inputs.max() + 0.5
+            xx = np.arange(x_min, x_max, step).reshape(-1, 1)
+            grid_predictions = np.zeros(len(xx))
 
-            # Calcul de la pseudo-inverse et des weights
-            X_prime = np.linalg.pinv(X)
-            w = X_prime.dot(Y)
+            for i in range(len(xx)):
+                input_ptr = xx[i].ctypes.data_as(ctypes.POINTER(ctypes.c_double))
+                output_ptr = lib.mlp_predict(mlp, input_ptr, 1, ctypes.c_bool(isclassification))
+                grid_predictions[i] = output_ptr[0]
+                lib.mlp_free(output_ptr)
 
-            # Traçons les résultats en 2D
-            plt.scatter(inputs, outputs, color='blue', label='Data points')
-            x_vals = np.linspace(inputs.min(), inputs.max(), 100)
-            y_vals = w[0] + w[1] * x_vals
-
-            plt.plot(x_vals, y_vals, color='red', label='Regression line')
-            plt.xlabel('Feature')
-            plt.ylabel('Output')
+            plt.figure(figsize=(10, 6))
+            plt.scatter(inputs, outputs, color='blue', label='Données réelles')
+            plt.plot(xx, grid_predictions, color='red', label='Prédictions')
+            plt.title(title)
+            plt.xlabel('Entrée')
+            plt.ylabel('Sortie')
             plt.legend()
             plt.show()
-
 
         elif num_feature == 2:
-            # Régression linéaire avec pseudo-inverse de Moore Penrose pour deux caractéristiques
-            ones = np.ones((inputs.shape[0], 1))
-            X = np.hstack([ones, inputs])
-            Y = outputs
+            x_min, x_max = inputs[:, 0].min() - 0.5, inputs[:, 0].max() + 0.5
+            y_min, y_max = inputs[:, 1].min() - 0.5, inputs[:, 1].max() + 0.5
 
-            # Calcul de la pseudo-inverse et des poids
-            X_prime = np.linalg.pinv(X)
-            w = X_prime.dot(Y)
+            xx, yy = np.meshgrid(np.arange(x_min, x_max, step), np.arange(y_min, y_max, step))
+            grid_points = np.c_[xx.ravel(), yy.ravel()]
+            grid_predictions = np.zeros(len(grid_points))
 
-            # Tracé des résultats en 3D
-            fig = plt.figure()
+            for i in range(len(grid_points)):
+                input_ptr = grid_points[i].ctypes.data_as(ctypes.POINTER(ctypes.c_double))
+                output_ptr = lib.mlp_predict(mlp, input_ptr, 2, ctypes.c_bool(isclassification))
+                grid_predictions[i] = output_ptr[0]
+                lib.mlp_free(output_ptr)
+
+            fig = plt.figure(figsize=(12, 8))
             ax = fig.add_subplot(111, projection='3d')
-            ax.scatter(inputs[:, 0], inputs[:, 1], outputs, color='blue', label='Data points')
 
-            x_surf, y_surf = np.meshgrid(np.linspace(inputs[:, 0].min(), inputs[:, 0].max(), 100),
-                                         np.linspace(inputs[:, 1].min(), inputs[:, 1].max(), 100))
-            z_surf = w[0] + w[1] * x_surf + w[2] * y_surf
-            ax.plot_surface(x_surf, y_surf, z_surf, color='red', alpha=0.5, label='Regression plane')
+            # Affichage des points de données réels
+            scatter = ax.scatter(inputs[:, 0], inputs[:, 1], outputs, c=outputs, cmap='viridis', s=50,
+                                 label='Données réelles')
 
-            ax.set_xlabel('Feature 1')
-            ax.set_ylabel('Feature 2')
-            ax.set_zlabel('Output')
+            # Affichage de la surface de prédiction
+            surf = ax.plot_surface(xx, yy, grid_predictions.reshape(xx.shape), cmap='viridis', alpha=0.8)
+
+            ax.set_xlabel('Entrée 1')
+            ax.set_ylabel('Entrée 2')
+            ax.set_zlabel('Sortie')
+            ax.set_title(title)
+
+            # Ajout d'une barre de couleur
+            fig.colorbar(surf, shrink=0.5, aspect=5, label='Valeur prédite')
 
             plt.legend()
             plt.show()
-
-        else:
-            raise ValueError(
-                "Ce code ne gère actuellement que la régression linéaire pour jusqu'à deux caractéristiques")
 
     lib.mlp_free(mlp)
     return xx, yy, grid_predictions, inputs, outputs
@@ -405,7 +416,7 @@ def test_image(inputs, outputs, layers, title, k, iteration_count, alpha, images
 
     # Création du MLP
     mlp = lib.create_mlp(npl_array, len(npl))
-    # mlp = lib.load_mlp("./save_model/model_mlp_[4800, 256, 128, 3]_1000_0.001.json".encode('utf-8'))
+    # mlp = lib.load_mlp("./save_model/model_mlp_[4800, 50, 50, 3]_2000000_9e-05.json".encode('utf-8'))
 
     #Entraînement du MLP
     lib.train_mlp(mlp, inputs.ctypes.data_as(ctypes.POINTER(ctypes.c_double)), len(inputs),
@@ -413,7 +424,8 @@ def test_image(inputs, outputs, layers, title, k, iteration_count, alpha, images
                   ctypes.c_bool(True), iteration_count, alpha, progress_callback_c,
                   None)
 
-    validate_model(mlp, k, inputs_test, npl, outputs_names, outputs_test)
+    # validate_model(mlp, k, inputs_test, npl, outputs_names, outputs_test)
+    validate_model(mlp, inputs_test, outputs_test, npl)
 
     print("save")
     save_path = f"./save_model/model_mlp_{layers}_{iteration_count}_{alpha}.json".encode('utf-8')
@@ -666,6 +678,34 @@ def cas_de_test_régression():
 #cas_de_test()
 #cas_de_test_régression()
 
+
+def plot_loss_curve(json_file_path, iteration_count):
+    # Lire les données de perte à partir du fichier JSON
+    with open(json_file_path, 'r') as file:
+        data = json.load(file)
+
+    # Extraire les valeurs de perte
+    loss_values = data.get('loss', [])
+
+    # Vérifier si des valeurs de perte ont été trouvées
+    if not loss_values:
+        print("Aucune valeur de perte trouvée dans le fichier JSON.")
+        return
+
+    # Créer une liste d'itérations en fonction du nombre d'itérations
+    iterations = range(0, iteration_count + 1, max(iteration_count // len(loss_values), 1))
+
+    # Tracer la courbe de perte
+    plt.figure(figsize=(10, 6))
+    plt.plot(iterations[:len(loss_values)], loss_values, label='Loss')
+    plt.xlabel('Iterations')
+    plt.ylabel('Loss')
+    plt.title('Training Loss Curve')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+
 def predict_image_class(mlp, image_path, npl, class_names):
     # Charger et standardiser l'image
     image_1D = read_image_as_1D(image_path)
@@ -789,13 +829,18 @@ def test_train_image(n, iteration_count, alpha, class1, class2, class3):
                train_images, inputs_test, test_outputs, test_images)
 
 
-# n = [4800, 512, 256, 3]
-n = [4800, 102, 102, 3]
-iteration_count = 20000
-alpha = 0.0001
+# n = [4800, 1000, 500, 3]
+n = [4800, 128, 64, 3]
+iteration_count = 1000
+alpha = 0.01
 
 class1 = "../DataSet/vache"
 class2 = "../DataSet/chevre"
 class3 = "../DataSet/mouton"
 
 test_train_image(n, iteration_count, alpha, class1, class2, class3)
+
+# Exemple d'utilisation
+# json_file_path = 'C:\\Users\\lucho\\Documents\\cours\\projet_annuel\\app\\save_model\\model_mlp_[4800, 50, 50, 3]_2000000_9e-05.json'
+# iteration_count = 2000000 # Remplacez ceci par le nombre réel d'itérations
+# plot_loss_curve(json_file_path, iteration_count)

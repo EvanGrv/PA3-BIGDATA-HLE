@@ -80,10 +80,14 @@ impl MLP {
                     total += self.W[l][i][j] * self.X[l - 1][i];
                 }
 
-                if is_classification || l <= self.L {
-                    total = total.tanh()
+                if !is_classification{// Application de la fonction d'activation tanh à toutes les couches sauf la dernière
+                    if l != self.L { // Vérifie si ce n'est pas la dernière couche
+                        total = total.tanh();
+                }}
+                else {
+                    total = total.tanh();
                 }
-
+                // Mise à jour des activations
                 self.X[l][j] = total;
             }
         }
