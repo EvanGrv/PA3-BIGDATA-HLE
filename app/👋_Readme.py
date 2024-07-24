@@ -27,6 +27,142 @@ st.markdown(
     - Evan GREVEN
     - Hugo HOUNTONDJI
     
+   
+    # Projet Annuel 2023/2024
+    
+    ## Classification des vaches, des moutons et des chèvres
+    
+    ### Auteurs:
+    - Lucas BONERE
+    - Evan GREVEN
+    - Hugo HOUNTONDJI
+    
+     Projet de Classification d'Images
+    
+    Ce projet implémente une application de classification d'images, un script d'entraînement de modèle et des tests unitaires pour divers modèles de machine learning.
+    
+    ## Structure du Projet
+    
+    ### 📷_App.py
+    Application de classification d'images utilisant Streamlit. Cette application permet de télécharger une image, de la prétraiter et de prédire sa classe à l'aide d'un modèle de deep learning pré-entraîné.
+    
+    ### 📈_App_Train.py
+    Script d'entraînement de modèle utilisant Streamlit. Ce script charge les données, les prépare pour l'entraînement, entraîne un modèle de machine learning et affiche la précision sur les données de test.
+    
+    ### 🧪_Cas_De_Test.py
+    Tests unitaires pour vérifier le bon fonctionnement des modèles de machine learning. Ce fichier utilise la bibliothèque `unittest` pour tester les prédictions des modèles implémentés dans les fichiers `linear_model.py`, `mlp.py` et `rbf.py`.
+    
+    ### linear_model.py
+    Implémentation d'un modèle linéaire simplifié. Le modèle retourne simplement l'entrée comme prédiction.
+    
+    ### mlp.py
+    Implémentation d'un modèle MLP (Multilayer Perceptron). Ce fichier contient un modèle MLP avec une prédiction statique.
+    
+    ### rbf.py
+    Implémentation d'un modèle RBF (Radial Basis Function). Ce fichier contient un modèle RBF avec une prédiction statique.
+    
+    ## Fonctionnement du Projet
+    
+    Le projet est structuré de manière à fournir une interface utilisateur pour la classification d'images ainsi qu'un script pour l'entraînement de modèles de machine learning. Les tests unitaires permettent de vérifier la validité des implémentations des modèles.
+    
+    ### Prérequis
+    
+    - Python 3.7 ou plus
+    - Bibliothèques nécessaires (énumérées dans `requirements.txt`)
+    
+    ### Installation
+    
+    1. Clonez le dépôt :
+        ```bash
+        git clone https://github.com/votre-utilisateur/votre-repo.git
+        cd votre-repo
+        ```
+    
+    2. Créez un environnement virtuel et activez-le :
+        ```bash
+        python -m venv env
+        source env/bin/activate  # Sur Windows, utilisez `env\Scripts\activate`
+        ```
+    
+    3. Installez les dépendances :
+        ```bash
+        pip install -r requirements.txt
+        ```
+    
+    ### Utilisation
+    
+    #### 1. Application de Classification d'Images
+    
+    Pour exécuter l'application de classification d'images :
+    ```bash
+    streamlit run 📷_App.py
+    ```
+    - Chargez une image en utilisant l'interface Streamlit.
+    - L'application affichera l'image téléchargée et prédira sa classe.
+    
+    #### 2. Entraînement du Modèle
+    
+    Pour exécuter le script d'entraînement du modèle :
+    ```bash
+    streamlit run 📈_App_Train.py
+    ```
+    - Le script chargera les données, entraînera un modèle et affichera la précision sur les données de test.
+    
+    #### 3. Tests Unitaires
+    
+    Pour exécuter les tests unitaires :
+    ```bash
+    python -m unittest 🧪_Cas_De_Test.py
+    ```
+    - Les tests vérifieront le bon fonctionnement des différentes implémentations de modèles.
+    
+    ## Modèles
+    
+    ### Modèle Linéaire
+    Implémenté dans `linear_model.py`.
+    
+    ### Modèle MLP (Multilayer Perceptron)
+    Implémenté dans `mlp.py`.
+    
+    ### Modèle RBF (Radial Basis Function)
+    Implémenté dans `rbf.py`.
+    
+    ## Contribution
+    
+    Les contributions sont les bienvenues. Veuillez soumettre une pull request ou ouvrir une issue pour discuter de vos modifications.
+    
+    ## License
+    
+    Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails.
+    
+    ## Détails Techniques et Explication du Code
+    
+    import streamlit as st
+    
+    st.set_page_config(
+        page_title="Hello",
+        page_icon="👋",
+    )
+    
+    st.write("# Welcome Train APP Model! 👋")
+    
+    st.sidebar.success("Selectionne une page de l'application")
+
+    -------------------------------------------------------------------
+    
+    ## Lien vers le [Github](https://github.com/EvanGrv/PA3-BIGDATA-HLE)
+    
+    -------------------------------------------------------------------
+    
+    # Projet Annuel 2023/2024
+
+    ## Classification des vaches, des moutons et des chèvres
+    
+    ### Auteurs:
+    - Lucas BONERE
+    - Evan GREVEN
+    - Hugo HOUNTONDJI
+    
     ## Sommaire
     
     1. [Ressource Du Projet](#ressource-du-projet)
